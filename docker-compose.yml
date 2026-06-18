@@ -1,0 +1,34 @@
+# 可选：用容器一键起依赖。本机已装 Postgres17/Redis8/Meilisearch 则无需使用。
+services:
+  postgres:
+    image: pgvector/pgvector:pg17        # 自带 pgvector 扩展
+    environment:
+      POSTGRES_USER: yinshi
+      POSTGRES_PASSWORD: yinshi
+      POSTGRES_DB: yinshi
+      TZ: Asia/Shanghai
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+
+  redis:
+    image: redis:8-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["6379:6379"]
+    volumes:
+      - redisdata:/data
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.12
+    environment:
+      MEILI_MASTER_KEY: yinshi-master-key
+      MEILI_ENV: development
+    ports: ["7700:7700"]
+    volumes:
+      - meilidata:/meili_data
+
+volumes:
+  pgdata:
+  redisdata:
+  meilidata:

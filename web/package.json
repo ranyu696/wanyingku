@@ -1,0 +1,17 @@
+{
+  "name": "yinshi-web",
+  "private": true,
+  "version": "0.0.0",
+  "description": "影视聚合前端 monorepo（Bun workspaces）：user 用户端 + admin 管理后台",
+  "workspaces": [
+    "user",
+    "admin"
+  ],
+  "scripts": {
+    "dev:user": "bun --filter ./user dev",
+    "dev:admin": "bun --filter ./admin dev",
+    "build": "bun --filter '*' build",
+    "lint": "bun --filter '*' lint"
+  },
+  "packageManager": "bun@1.3.14"
+}

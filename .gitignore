@@ -1,0 +1,31 @@
+# binaries
+/bin/
+*.exe
+
+# config (keep .example)
+config.yaml
+config.local.yaml
+
+# secrets — Firebase Admin SDK 私钥，绝不入库
+*-firebase-adminsdk-*.json
+*serviceAccount*.json
+
+# go
+vendor/
+
+# data / runtime
+/data/
+*.log
+meili_data/
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/
+
+# frontend
+web/node_modules/
+web/dist/
+admin/node_modules/
+admin/dist/
+.meili-data/

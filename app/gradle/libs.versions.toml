@@ -1,0 +1,59 @@
+# 版本目录。⚠️ 在 Android Studio 里同步时如有红线，按提示把版本升到当前最新即可。
+# 这套组合是 2025 末的已知可用搭配，作为起点。
+[versions]
+agp = "9.2.1"
+kotlin = "2.2.10"
+compose = "1.9.0-alpha02"         # 配 Kotlin 2.2.x 必须 ≥1.9（暂无稳定版）；Kotlin 回 2.1.x 可用 1.8.2 稳定版
+androidx-activity = "1.10.1"
+coroutines = "1.10.2"
+serialization = "1.9.0"   # 配 Kotlin 2.2.x
+ktor = "3.2.0"
+coil = "3.2.0"
+media3 = "1.5.1"
+datastore = "1.1.1"
+firebaseMessaging = "24.1.1"   # FCM 推送（Android）
+googleServices = "4.4.2"       # google-services 插件
+# Compose Unstyled 在 Maven Central 上真实坐标是 com.composables:core（组件）+ composetheme（主题）。
+# 注：你贴的 composeunstyled-* 拆分包是官网更新的命名，发布到 Central 后可替换这两项。
+composables = "1.36.1"
+composetheme = "1.3.0"
+
+# Android SDK
+android-compileSdk = "35"
+android-minSdk = "30"   # Ktor 3.2.0 含带空格的成员名，需 DEX 040（minSdk≥30）
+android-targetSdk = "35"
+
+[libraries]
+# Compose（由 compose-multiplatform 插件统一管理，无需单独写版本）
+# 协程
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+# 序列化
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+# Ktor 网络（CIO 引擎在 Android 上可用；以后加 iOS 时换 Darwin 引擎）
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+# Coil 3 图片加载（多平台）
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
+# Compose Unstyled（headless 组件 + 主题），Maven Central 真实坐标
+composables-core = { module = "com.composables:core", version.ref = "composables" }
+composables-composetheme = { module = "com.composables:composetheme", version.ref = "composetheme" }
+# Android
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+# Media3 / ExoPlayer（仅 androidMain，播放 m3u8）
+media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
+media3-exoplayer-hls = { module = "androidx.media3:media3-exoplayer-hls", version.ref = "media3" }
+media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
+# FCM 推送（仅 androidMain）
+firebase-messaging = { module = "com.google.firebase:firebase-messaging", version.ref = "firebaseMessaging" }
+
+[plugins]
+androidApplication = { id = "com.android.application", version.ref = "agp" }
+kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "compose" }
+composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+googleServices = { id = "com.google.gms.google-services", version.ref = "googleServices" }

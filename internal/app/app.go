@@ -71,7 +71,8 @@ func Build(cfg *config.Config) (*App, error) {
 		slog.Warn("FCM 推送初始化失败，站内通知仍可用", "err", err)
 	}
 
-	engine := resolve.New(gdb, tmdbClient, ai, cfg.Resolve, cfg.AI).WithStorage(BuildStorage(cfg))
+	store := BuildStorage(cfg)
+	engine := resolve.New(gdb, tmdbClient, ai, cfg.Resolve, cfg.AI).WithStorage(store)
 	mac := collect.NewMacCMSClient(time.Duration(cfg.Collect.RequestTimeoutSec)*time.Second, cfg.Collect.UserAgent)
 	syncer := collect.NewSyncer(gdb, mac, engine, se, cfg.Collect, pushSvc)
 	scheduler := collect.NewScheduler(gdb, syncer, cfg.Collect.Concurrency, cfg.Collect.UserAgent, cfg.Collect.ProbeIntervalHours)
@@ -86,6 +87,7 @@ func Build(cfg *config.Config) (*App, error) {
 		Repo:   repo,
 		Syncer: syncer,
 		Push:   pushSvc,
+		Store:  store,
 		DB:     gdb,
 	}
 

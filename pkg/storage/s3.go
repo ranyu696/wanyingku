@@ -44,9 +44,18 @@ type Options struct {
 }
 
 func NewS3(o Options) (*S3, error) {
-	cli, err := minio.New(o.Endpoint, &minio.Options{
+	// 端点容错：允许带协议（如 Railway/Tigris 提供的 https://t3.storageapi.dev），
+	// minio 只接受裸主机名，这里剥掉 scheme 并据此推断是否走 TLS。
+	endpoint := o.Endpoint
+	secure := o.UseSSL
+	if i := strings.Index(endpoint, "://"); i >= 0 {
+		secure = strings.HasPrefix(endpoint, "https://")
+		endpoint = endpoint[i+3:]
+	}
+	endpoint = strings.TrimRight(endpoint, "/")
+	cli, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(o.AccessKey, o.SecretKey, ""),
-		Secure: o.UseSSL,
+		Secure: secure,
 		Region: o.Region,
 	})
 	if err != nil {
@@ -66,6 +75,16 @@ func NewS3(o Options) (*S3, error) {
 }
 
 func (s *S3) Enabled() bool { return true }
+
+// PresignGet 生成对象的预签名 GET URL（默认 24h）。私有桶下后端 302 重定向到它，
+// 图片字节由对象存储直发浏览器（桶出站免费），不经服务转发。
+func (s *S3) PresignGet(ctx context.Context, key string) (string, error) {
+	u, err := s.client.PresignedGetObject(ctx, s.bucket, key, 24*time.Hour, nil)
+	if err != nil {
+		return "", err
+	}
+	return u.String(), nil
+}
 
 func (s *S3) Rehost(ctx context.Context, srcURL string) Image {
 	if srcURL == "" {

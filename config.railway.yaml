@@ -28,7 +28,7 @@ meilisearch:
   index: "titles"
 
 tmdb:
-  enabled: false         # 需要归类权威源时设 true 并提供 TMDB_API_KEY
+  enabled: true          # 归类权威源；api_key 由 TMDB_API_KEY 环境变量注入
   api_key: ""
   base_url: "https://api.themoviedb.org/3"
   image_base: "https://image.tmdb.org/t/p"
@@ -52,7 +52,7 @@ resolve:
   auto_merge_threshold: 0.86
   llm_review_low: 0.62
   year_tolerance: 1
-  enable_tmdb: false
+  enable_tmdb: true
 
 collect:
   concurrency: 3

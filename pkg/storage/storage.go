@@ -2,7 +2,10 @@
 // 并计算 BlurHash 哈希占位（前端先显模糊占位再加载真图）。未配置时 Noop 原样返回外链。
 package storage
 
-import "context"
+import (
+	"context"
+	"errors"
+)
 
 // Image 转存结果：自有公开 URL + BlurHash 占位串。
 type Image struct {
@@ -15,10 +18,15 @@ type Storage interface {
 	// Rehost 下载 srcURL，存入对象存储并计算 BlurHash，返回结果；
 	// 失败或未启用时 URL 原样返回 srcURL、BlurHash 为空。
 	Rehost(ctx context.Context, srcURL string) Image
+	// PresignGet 为对象 key 生成临时预签名 GET URL（私有桶 + 后端重定向分发用）。
+	PresignGet(ctx context.Context, key string) (string, error)
 }
 
 // Noop 未配置时的实现：原样返回外链，无占位。
 type Noop struct{}
 
-func (Noop) Enabled() bool                            { return false }
+func (Noop) Enabled() bool                              { return false }
 func (Noop) Rehost(_ context.Context, src string) Image { return Image{URL: src} }
+func (Noop) PresignGet(context.Context, string) (string, error) {
+	return "", errors.New("storage disabled")
+}

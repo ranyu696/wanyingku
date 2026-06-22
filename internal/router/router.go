@@ -27,6 +27,9 @@ func Setup(cfg *config.Config, h *handler.Handler) *echo.Echo {
 	secret := cfg.App.JWTSecret
 	g := e.Group(cfg.App.APIPrefix)
 
+	// 图片分发：私有桶预签名重定向（公开、无需登录）
+	g.GET("/img/*", h.ImageProxy)
+
 	// 公开接口（可选登录：登录后返回个性化字段）
 	pub := g.Group("", mw.OptionalAuth(secret))
 	pub.POST("/auth/register", h.Register)

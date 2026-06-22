@@ -13,6 +13,7 @@ import (
 	"github.com/xiaoxin/cms/internal/service/request"
 	"github.com/xiaoxin/cms/internal/service/title"
 	"github.com/xiaoxin/cms/internal/service/userdata"
+	"github.com/xiaoxin/cms/pkg/storage"
 	"gorm.io/gorm"
 )
 
@@ -25,6 +26,7 @@ type Handler struct {
 	Repo   *repository.Repo
 	Syncer *collect.Syncer
 	Push   *push.Service
+	Store  storage.Storage
 	DB     *gorm.DB
 }
 

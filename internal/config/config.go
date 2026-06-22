@@ -241,6 +241,34 @@ func (c *Config) applyEnv() {
 	if v := os.Getenv("YINSHI_MEILI_ENABLED"); v != "" {
 		c.Meili.Enabled = v == "true" || v == "1"
 	}
+	// 对象存储（S3 兼容图床）：敏感凭据通过环境变量注入，不入库。
+	if v := os.Getenv("YINSHI_S3_ENABLED"); v != "" {
+		c.Storage.Enabled = v == "true" || v == "1"
+	}
+	if v := os.Getenv("YINSHI_S3_ENDPOINT"); v != "" {
+		c.Storage.Endpoint = v
+	}
+	if v := os.Getenv("YINSHI_S3_REGION"); v != "" {
+		c.Storage.Region = v
+	}
+	if v := os.Getenv("YINSHI_S3_BUCKET"); v != "" {
+		c.Storage.Bucket = v
+	}
+	if v := os.Getenv("YINSHI_S3_ACCESS_KEY"); v != "" {
+		c.Storage.AccessKey = v
+	}
+	if v := os.Getenv("YINSHI_S3_SECRET_KEY"); v != "" {
+		c.Storage.SecretKey = v
+	}
+	if v := os.Getenv("YINSHI_S3_PUBLIC_BASE_URL"); v != "" {
+		c.Storage.PublicBaseURL = v
+	}
+	if v := os.Getenv("YINSHI_S3_PREFIX"); v != "" {
+		c.Storage.Prefix = v
+	}
+	if v := os.Getenv("YINSHI_S3_USE_SSL"); v != "" {
+		c.Storage.UseSSL = v == "true" || v == "1"
+	}
 	// PORT：平台动态端口（Railway/Heroku 等），覆盖监听地址。
 	if v := os.Getenv("PORT"); v != "" {
 		c.App.Addr = ":" + v

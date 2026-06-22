@@ -14,9 +14,11 @@ import (
 )
 
 type Service struct {
-	http    *resty.Client
-	index   string
-	enabled bool
+	http     *resty.Client
+	index    string
+	enabled  bool
+	embedder string         // 非空则启用语义/混合搜索（embedder 名）
+	embedCfg map[string]any // Meili embedder 设置（EnsureIndex 时下发）
 }
 
 // TitleDoc 写入 Meili 的文档结构。
@@ -45,7 +47,33 @@ func New(cfg *config.Config) *Service {
 	if cfg.Meili.APIKey != "" {
 		h.SetAuthToken(cfg.Meili.APIKey)
 	}
-	return &Service{http: h, index: cfg.Meili.Index, enabled: cfg.Meili.Enabled}
+	s := &Service{http: h, index: cfg.Meili.Index, enabled: cfg.Meili.Enabled}
+	// 语义搜索 embedder：接 OpenAI 兼容嵌入端点（Gemini 等）。单条 input 提交，Meili 后台异步嵌入。
+	if cfg.Meili.EmbedEnabled && cfg.Meili.EmbedAPIKey != "" {
+		model := cfg.Meili.EmbedModel
+		if model == "" {
+			model = "gemini-embedding-001"
+		}
+		url := cfg.Meili.EmbedURL
+		if url == "" {
+			url = "https://generativelanguage.googleapis.com/v1beta/openai/embeddings"
+		}
+		dim := cfg.Meili.EmbedDim
+		if dim == 0 {
+			dim = 768
+		}
+		s.embedder = "gemini"
+		s.embedCfg = map[string]any{
+			"source":           "rest",
+			"url":              url,
+			"apiKey":           cfg.Meili.EmbedAPIKey,
+			"dimensions":       dim,
+			"documentTemplate": "{{doc.name}}. {{doc.overview}}",
+			"request":          map[string]any{"model": model, "input": "{{text}}", "dimensions": dim},
+			"response":         map[string]any{"data": []any{map[string]any{"embedding": "{{embedding}}"}}},
+		}
+	}
+	return s
 }
 
 func (s *Service) Enabled() bool { return s.enabled }
@@ -60,11 +88,21 @@ func (s *Service) EnsureIndex(ctx context.Context) error {
 		SetBody(map[string]any{"uid": s.index, "primaryKey": "id"}).
 		Post("/indexes")
 
+	// 语义搜索：开启实验特性 vectorStore（v1.12 需要；新版已 GA，重复设置无害），并注册 embedder。
+	if s.embedder != "" {
+		s.http.R().SetContext(ctx).
+			SetBody(map[string]any{"vectorStore": true}).
+			Patch("/experimental-features")
+	}
+
 	settings := map[string]any{
 		"searchableAttributes": []string{"name", "original_name", "aliases", "overview"},
 		"filterableAttributes": []string{"kind", "year", "genre_ids", "source_count"},
 		"sortableAttributes":   []string{"popularity", "year", "vote_average", "updated_at", "latest_episode"},
 		"rankingRules":         []string{"words", "typo", "proximity", "attribute", "sort", "exactness"},
+	}
+	if s.embedder != "" && s.embedCfg != nil {
+		settings["embedders"] = map[string]any{s.embedder: s.embedCfg}
 	}
 	resp, err := s.http.R().SetContext(ctx).SetBody(settings).
 		Patch(fmt.Sprintf("/indexes/%s/settings", s.index))
@@ -148,6 +186,10 @@ func (s *Service) Search(ctx context.Context, opt SearchOptions) ([]int64, int64
 	}
 	if opt.Sort != "" {
 		body["sort"] = []string{opt.Sort}
+	}
+	// 启用 embedder 时走混合搜索：关键词 + 语义各半（semanticRatio=0.5）。
+	if s.embedder != "" {
+		body["hybrid"] = map[string]any{"semanticRatio": 0.5, "embedder": s.embedder}
 	}
 	var out searchResp
 	resp, err := s.http.R().SetContext(ctx).SetBody(body).SetResult(&out).

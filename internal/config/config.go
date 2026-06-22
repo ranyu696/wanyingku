@@ -69,6 +69,12 @@ type Meili struct {
 	Host    string `yaml:"host"`
 	APIKey  string `yaml:"api_key"`
 	Index   string `yaml:"index"`
+	// 语义搜索 embedder（可选）：接 OpenAI 兼容嵌入端点（如 Gemini），开启后走混合搜索。
+	EmbedEnabled bool   `yaml:"embed_enabled"`
+	EmbedURL     string `yaml:"embed_url"`
+	EmbedAPIKey  string `yaml:"embed_api_key"`
+	EmbedModel   string `yaml:"embed_model"`
+	EmbedDim     int    `yaml:"embed_dim"`
 }
 
 type TMDB struct {
@@ -240,6 +246,23 @@ func (c *Config) applyEnv() {
 	}
 	if v := os.Getenv("YINSHI_MEILI_ENABLED"); v != "" {
 		c.Meili.Enabled = v == "true" || v == "1"
+	}
+	if v := os.Getenv("YINSHI_MEILI_EMBED_ENABLED"); v != "" {
+		c.Meili.EmbedEnabled = v == "true" || v == "1"
+	}
+	if v := os.Getenv("YINSHI_MEILI_EMBED_API_KEY"); v != "" {
+		c.Meili.EmbedAPIKey = v
+	}
+	if v := os.Getenv("YINSHI_MEILI_EMBED_MODEL"); v != "" {
+		c.Meili.EmbedModel = v
+	}
+	if v := os.Getenv("YINSHI_MEILI_EMBED_URL"); v != "" {
+		c.Meili.EmbedURL = v
+	}
+	if v := os.Getenv("YINSHI_MEILI_EMBED_DIM"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			c.Meili.EmbedDim = n
+		}
 	}
 	// 对象存储（S3 兼容图床）：敏感凭据通过环境变量注入，不入库。
 	if v := os.Getenv("YINSHI_S3_ENABLED"); v != "" {

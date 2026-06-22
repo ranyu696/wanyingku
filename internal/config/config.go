@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"gopkg.in/yaml.v3"
 )
@@ -217,6 +218,32 @@ func (c *Config) applyEnv() {
 	}
 	if v := os.Getenv("AI_API_KEY"); v != "" {
 		c.AI.APIKey = v
+	}
+	// Redis：容器化部署常用环境变量注入（如 Railway 通过引用变量提供 host/port/password）。
+	if v := os.Getenv("YINSHI_REDIS_ADDR"); v != "" {
+		c.Redis.Addr = v
+	}
+	if v := os.Getenv("YINSHI_REDIS_PASSWORD"); v != "" {
+		c.Redis.Password = v
+	}
+	if v := os.Getenv("YINSHI_REDIS_DB"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			c.Redis.DB = n
+		}
+	}
+	// Meilisearch：容器化部署时通过环境变量接入（未配置则沿用 YAML 设置）。
+	if v := os.Getenv("YINSHI_MEILI_HOST"); v != "" {
+		c.Meili.Host = v
+	}
+	if v := os.Getenv("YINSHI_MEILI_API_KEY"); v != "" {
+		c.Meili.APIKey = v
+	}
+	if v := os.Getenv("YINSHI_MEILI_ENABLED"); v != "" {
+		c.Meili.Enabled = v == "true" || v == "1"
+	}
+	// PORT：平台动态端口（Railway/Heroku 等），覆盖监听地址。
+	if v := os.Getenv("PORT"); v != "" {
+		c.App.Addr = ":" + v
 	}
 }
 

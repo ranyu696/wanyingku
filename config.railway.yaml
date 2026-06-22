@@ -1,0 +1,72 @@
+# Railway 生产部署配置。敏感值由 Railway 环境变量注入（见 internal/config/config.go applyEnv）：
+#   YINSHI_DB_DSN / YINSHI_JWT_SECRET / YINSHI_REDIS_ADDR / YINSHI_REDIS_PASSWORD / PORT / TMDB_API_KEY / AI_API_KEY
+app:
+  name: yinshi
+  env: prod
+  addr: ":8080"          # 被 PORT 环境变量覆盖
+  api_prefix: "/api/v1"
+  timezone: "Asia/Shanghai"
+  jwt_secret: "override-via-YINSHI_JWT_SECRET"
+  jwt_expire_hours: 168
+
+database:
+  dsn: "override-via-YINSHI_DB_DSN"
+  max_open: 50
+  max_idle: 10
+  log_sql: false
+
+redis:
+  addr: "override-via-YINSHI_REDIS_ADDR"
+  password: ""           # 由 YINSHI_REDIS_PASSWORD 覆盖
+  db: 0
+  cache_ttl_sec: 600
+
+meilisearch:
+  enabled: false         # 未部署 Meili，搜索降级到 pg_trgm/ILIKE
+  host: ""
+  api_key: ""
+  index: "titles"
+
+tmdb:
+  enabled: false         # 需要归类权威源时设 true 并提供 TMDB_API_KEY
+  api_key: ""
+  base_url: "https://api.themoviedb.org/3"
+  image_base: "https://image.tmdb.org/t/p"
+  language: "zh-CN"
+  region: "CN"
+  proxy: ""
+
+ai:
+  vector_enabled: false  # 未启用 pgvector（迁移跳过 002_vector.sql）
+  llm_enabled: false
+  provider: "openai"
+  base_url: "https://api.openai.com/v1"
+  api_key: ""
+  embedding_model: "text-embedding-3-small"
+  embedding_dim: 1536
+  chat_model: "gpt-4o-mini"
+  request_timeout_sec: 30
+
+resolve:
+  fuzzy_threshold: 0.42
+  auto_merge_threshold: 0.86
+  llm_review_low: 0.62
+  year_tolerance: 1
+  enable_tmdb: false
+
+collect:
+  concurrency: 3
+  request_timeout_sec: 20
+  user_agent: "Mozilla/5.0 (yinshi-collector)"
+  default_interval_min: 720
+  scheduler_enabled: true
+  page_delay_ms: 1500
+  max_pages: 0
+  probe_interval_hours: 0
+
+storage:
+  enabled: false
+  prefix: "images"
+
+push:
+  enabled: false

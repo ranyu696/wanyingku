@@ -1,0 +1,15 @@
+# 后端镜像只需 Go 源码 + config + migrations。排除前端/移动端/构建产物以缩小构建上下文。
+.git
+web/
+app/
+bin/
+*.log
+data/
+meili_data/
+.meili-data/
+config.yaml
+config.local.yaml
+*.exe
+.DS_Store
+.idea/
+.vscode/

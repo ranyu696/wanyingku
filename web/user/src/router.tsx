@@ -28,8 +28,10 @@ const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   component: Home,
-  // 首页正文 SSR：服务端取 /home（含 banners + 各分类 sections），渲染出带影片的 HTML
-  loader: () => loadWithSSR<HomeData>("/home", async () => alova.Get<HomeData>("/home")),
+  // 首页正文 SSR：服务端取 /home（含 banners + 各分类 sections），渲染出带影片的 HTML。
+  // key 必须用路由 pathname "/"（entry-server 按 m.pathname 脱水），否则客户端找不到 SSR 快照
+  // 会二次请求 /home，拿到与服务端渲染时不一致的数据 → 水合报错(React #418)。
+  loader: () => loadWithSSR<HomeData>("/", async () => alova.Get<HomeData>("/home")),
 });
 const categoryRoute = createRoute({
   getParentRoute: () => rootRoute,

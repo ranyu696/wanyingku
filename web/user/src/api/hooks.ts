@@ -7,7 +7,6 @@ import type {
   Comment,
   DetailResp,
   Genre,
-  HomeData,
   NotificationItem,
   Paged,
   RequestItem,
@@ -25,12 +24,6 @@ export interface TitleFilter {
 }
 
 const emptyPage = { list: [], total: 0, page: 1, size: 24 };
-
-export function useHome() {
-  return useRequest(() => alova.Get<HomeData>("/home"), {
-    initialData: { banners: [], sections: [] } as HomeData,
-  });
-}
 
 export function useTitles(filter: TitleFilter) {
   return useWatcher(

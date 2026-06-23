@@ -53,6 +53,32 @@ func (s *Scheduler) RunProbe(ctx context.Context) {
 	}
 }
 
+// RunIndexNow 每日向 IndexNow 提交近 2 天更新的作品页（增量收录通知）。未配置 site/key 则不启动。
+func (s *Scheduler) RunIndexNow(ctx context.Context, site, key string) {
+	if site == "" || key == "" {
+		return
+	}
+	const tick = 24 * time.Hour
+	slog.Info("indexnow scheduler started", "interval", tick.String())
+	t := time.NewTimer(2 * time.Minute) // 启动 2 分钟后首跑，避开启动高峰
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			slog.Info("indexnow scheduler stopped")
+			return
+		case <-t.C:
+			n, code, err := SubmitIndexNow(ctx, s.db, site, key, 2)
+			if err != nil {
+				slog.Error("indexnow submit failed", "err", err)
+			} else {
+				slog.Info("indexnow submitted", "urls", n, "status", code)
+			}
+			t.Reset(tick)
+		}
+	}
+}
+
 func (s *Scheduler) Run(ctx context.Context) {
 	slog.Info("collect scheduler started", "concurrency", s.concurrency, "tick", s.tick.String())
 	t := time.NewTicker(s.tick)

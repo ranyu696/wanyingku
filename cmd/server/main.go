@@ -42,6 +42,8 @@ func main() {
 	if cfg.Collect.ProbeIntervalHours > 0 {
 		go application.Scheduler.RunProbe(ctx)
 	}
+	// 每日向 IndexNow 提交近期更新页（配了 key+site 才启）
+	go application.Scheduler.RunIndexNow(ctx, os.Getenv("YINSHI_SITE_URL"), os.Getenv("YINSHI_INDEXNOW_KEY"))
 
 	e := router.Setup(cfg, application.Handler)
 	go func() {

@@ -19,12 +19,18 @@ import Requests from "./pages/Requests";
 import SearchPage from "./pages/Search";
 import Watch from "./pages/Watch";
 import { alova } from "./api/client";
-import type { DetailResp } from "./api/types";
+import type { DetailResp, HomeData } from "./api/types";
 import { loadWithSSR } from "./ssrData";
 
 const rootRoute = createRootRoute({ component: Layout });
 
-const homeRoute = createRoute({ getParentRoute: () => rootRoute, path: "/", component: Home });
+const homeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/",
+  component: Home,
+  // 首页正文 SSR：服务端取 /home（含 banners + 各分类 sections），渲染出带影片的 HTML
+  loader: () => loadWithSSR<HomeData>("/home", async () => alova.Get<HomeData>("/home")),
+});
 const categoryRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/category",

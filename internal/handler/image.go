@@ -7,9 +7,10 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// ImageProxy 私有桶图片分发：为对象 key 生成预签名 URL 并 302 重定向。
-// 图片字节由对象存储直发浏览器（桶出站免费），后端只发跳转头，不转发图片内容。
-// 路由形如 GET /api/v1/img/images/<hash>.jpg，通配段即对象 key。
+// ImageProxy 私有桶图片分发（后端代理）：服务端用私有凭据从桶取流，直接吐给浏览器。
+// 全程走自有域名 api.wanyingku.com,不暴露对象存储域名。加长缓存(内容按 sha1 寻址,不可变)
+// 摊薄服务出站流量(浏览器/CDN 命中缓存后不再回源)。
+// 路由形如 GET /api/v1/img/images/<hash>.webp,通配段即对象 key。
 func (h *Handler) ImageProxy(c echo.Context) error {
 	if h.Store == nil || !h.Store.Enabled() {
 		return c.NoContent(http.StatusNotFound)
@@ -18,11 +19,11 @@ func (h *Handler) ImageProxy(c echo.Context) error {
 	if key == "" {
 		return c.NoContent(http.StatusNotFound)
 	}
-	url, err := h.Store.PresignGet(c.Request().Context(), key)
+	rc, ctype, err := h.Store.Get(c.Request().Context(), key)
 	if err != nil {
-		return c.NoContent(http.StatusBadGateway)
+		return c.NoContent(http.StatusNotFound)
 	}
-	// 浏览器/CDN 可短时缓存该跳转；缓存时长须小于预签名有效期（24h）。
-	c.Response().Header().Set("Cache-Control", "public, max-age=3600")
-	return c.Redirect(http.StatusFound, url)
+	defer rc.Close()
+	c.Response().Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	return c.Stream(http.StatusOK, ctype, rc)
 }

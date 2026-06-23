@@ -86,6 +86,25 @@ func (s *S3) PresignGet(ctx context.Context, key string) (string, error) {
 	return u.String(), nil
 }
 
+// Get 用服务端凭据读取私有桶对象，供后端代理分发（统一走自有域名）。
+// 返回对象流与 content-type；调用方负责 Close。
+func (s *S3) Get(ctx context.Context, key string) (io.ReadCloser, string, error) {
+	obj, err := s.client.GetObject(ctx, s.bucket, key, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, "", err
+	}
+	info, err := obj.Stat() // 触发实际请求；对象不存在/无权时在此报错
+	if err != nil {
+		_ = obj.Close()
+		return nil, "", err
+	}
+	ct := info.ContentType
+	if ct == "" {
+		ct = "application/octet-stream"
+	}
+	return obj, ct, nil
+}
+
 func (s *S3) Rehost(ctx context.Context, srcURL string) Image {
 	if srcURL == "" {
 		return Image{}

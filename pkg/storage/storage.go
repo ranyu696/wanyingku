@@ -5,6 +5,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"io"
 )
 
 // Image 转存结果：自有公开 URL + BlurHash 占位串。
@@ -20,6 +21,8 @@ type Storage interface {
 	Rehost(ctx context.Context, srcURL string) Image
 	// PresignGet 为对象 key 生成临时预签名 GET URL（私有桶 + 后端重定向分发用）。
 	PresignGet(ctx context.Context, key string) (string, error)
+	// Get 读取对象内容用于后端代理分发（返回流 + content-type）。
+	Get(ctx context.Context, key string) (io.ReadCloser, string, error)
 }
 
 // Noop 未配置时的实现：原样返回外链，无占位。
@@ -29,4 +32,7 @@ func (Noop) Enabled() bool                              { return false }
 func (Noop) Rehost(_ context.Context, src string) Image { return Image{URL: src} }
 func (Noop) PresignGet(context.Context, string) (string, error) {
 	return "", errors.New("storage disabled")
+}
+func (Noop) Get(context.Context, string) (io.ReadCloser, string, error) {
+	return nil, "", errors.New("storage disabled")
 }

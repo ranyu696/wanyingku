@@ -5,10 +5,12 @@
   "description": "影视聚合前端 monorepo（Bun workspaces）：user 用户端 + admin 管理后台",
   "workspaces": [
     "user",
+    "user-next",
     "admin"
   ],
   "scripts": {
     "dev:user": "bun --filter ./user dev",
+    "dev:user-next": "bun --filter ./user-next dev",
     "dev:admin": "bun --filter ./admin dev",
     "build": "bun --filter '*' build",
     "lint": "bun --filter '*' lint"

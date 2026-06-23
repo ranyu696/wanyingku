@@ -12,15 +12,14 @@ import (
 	_ "image/png"
 	"io"
 	"net/http"
-	"path"
 	"strings"
 	"time"
 
 	blurhash "github.com/buckket/go-blurhash"
+	webp "github.com/chai2010/webp" // 解码 + 编码 WebP（cgo / 内置 libwebp）
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	xdraw "golang.org/x/image/draw"
-	_ "golang.org/x/image/webp"
 )
 
 // S3 是 S3 兼容对象存储客户端（AWS S3 / Cloudflare R2 / 阿里云 OSS / 腾讯 COS / MinIO）。
@@ -123,21 +122,32 @@ func (s *S3) Rehost(ctx context.Context, srcURL string) Image {
 	if err != nil || len(data) == 0 {
 		return Image{URL: srcURL}
 	}
-	bh := computeBlurHash(data)
-	_, err = s.client.PutObject(ctx, s.bucket, key, bytes.NewReader(data), int64(len(data)),
-		minio.PutObjectOptions{ContentType: ctype, CacheControl: "public, max-age=31536000"})
+	out, outType, bh := encodeWebP(data, ctype)
+	_, err = s.client.PutObject(ctx, s.bucket, key, bytes.NewReader(out), int64(len(out)),
+		minio.PutObjectOptions{ContentType: outType, CacheControl: "public, max-age=31536000"})
 	if err != nil {
 		return Image{URL: srcURL, BlurHash: bh}
 	}
 	return Image{URL: s.url(key), BlurHash: bh}
 }
 
-// computeBlurHash 解码图片、缩到小图后计算 BlurHash 占位（失败返回空串）。
-func computeBlurHash(data []byte) string {
+// encodeWebP 解码原图，编码为 WebP(quality 80) 并计算 BlurHash 占位。
+// 解码/编码失败则原样返回（content-type 不变），保证个别图失败不影响转存。
+func encodeWebP(data []byte, srcType string) (out []byte, ctype string, blur string) {
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
-		return ""
+		return data, srcType, ""
 	}
+	blur = blurHashFromImage(img)
+	var buf bytes.Buffer
+	if err := webp.Encode(&buf, img, &webp.Options{Quality: 80}); err != nil || buf.Len() == 0 {
+		return data, srcType, blur
+	}
+	return buf.Bytes(), "image/webp", blur
+}
+
+// blurHashFromImage 缩到小图后计算 BlurHash 占位（失败返回空串）。
+func blurHashFromImage(img image.Image) string {
 	b := img.Bounds()
 	w, h := b.Dx(), b.Dy()
 	if w == 0 || h == 0 {
@@ -165,14 +175,11 @@ func computeBlurHash(data []byte) string {
 	return hash
 }
 
+// keyFor 统一用 .webp 后缀（转存即转码为 WebP；转码失败时对象仍按实际 content-type 返回，
+// 扩展名仅作展示，渲染以 content-type 为准）。
 func (s *S3) keyFor(srcURL string) string {
 	sum := sha1.Sum([]byte(srcURL))
-	name := hex.EncodeToString(sum[:])
-	ext := strings.ToLower(path.Ext(srcURL))
-	if len(ext) > 5 || ext == "" {
-		ext = ".jpg"
-	}
-	return fmt.Sprintf("%s/%s%s", s.prefix, name, ext)
+	return fmt.Sprintf("%s/%s.webp", s.prefix, hex.EncodeToString(sum[:]))
 }
 
 func (s *S3) url(key string) string {

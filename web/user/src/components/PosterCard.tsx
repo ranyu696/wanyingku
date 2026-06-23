@@ -1,7 +1,7 @@
+import Link from "next/link";
 import { Box, Chip, Typography } from "@mui/material";
 import { CirclePlay } from "lucide-react";
-import { Link } from "@tanstack/react-router";
-import type { Title } from "../api/types";
+import type { Title } from "@/lib/types";
 import PosterImage from "./PosterImage";
 
 export default function PosterCard({ t }: { t: Title }) {
@@ -14,8 +14,7 @@ export default function PosterCard({ t }: { t: Title }) {
   const meta = String(t.year || "");
   return (
     <Link
-      to="/title/$id"
-      params={{ id: t.slug || String(t.id) }}
+      href={`/title/${t.slug || t.id}`}
       style={{ textDecoration: "none", color: "inherit", display: "block" }}
     >
       <Box

@@ -1,3 +1,4 @@
+"use client";
 import { useState } from "react";
 import { Box, Typography } from "@mui/material";
 import { EyeOff } from "lucide-react";

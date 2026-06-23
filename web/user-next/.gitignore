@@ -1,8 +1,0 @@
-/node_modules
-/.next
-/out
-/build
-*.log
-.DS_Store
-*.local
-next-env.d.ts

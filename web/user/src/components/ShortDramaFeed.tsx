@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+"use client";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Avatar,
   Box,
@@ -22,17 +23,17 @@ import {
   VolumeX,
 } from "lucide-react";
 import Hls from "hls.js";
-import { useNavigate } from "@tanstack/react-router";
+import { useRouter } from "next/navigation";
 import {
   useComments,
   useCommentOps,
   useFavoriteOps,
   useLikeTitle,
   useSaveProgress,
-} from "../api/hooks";
-import type { DetailResp } from "../api/types";
-import { epBtnSx, epGridSx } from "../format";
-import { useAuth } from "../store/auth";
+} from "@/lib/hooks";
+import type { DetailResp } from "@/lib/types";
+import { epBtnSx, epGridSx } from "@/lib/format";
+import { useAuth } from "@/store/auth";
 
 interface PlayState {
   cur: number;
@@ -140,7 +141,7 @@ function RailAction({
   active,
   onClick,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   active?: boolean;
   onClick: () => void;
@@ -177,7 +178,7 @@ function RailAction({
 
 // 短剧 9:16 全屏信息流：上下滑切集 + 右侧动作栏 + 极简手势控件。
 export default function ShortDramaFeed({ resp, reload }: { resp: DetailResp; reload: () => void }) {
-  const nav = useNavigate();
+  const router = useRouter();
   const { token } = useAuth();
   const detail = resp.detail;
   const tid = detail.id;
@@ -296,8 +297,8 @@ export default function ShortDramaFeed({ resp, reload }: { resp: DetailResp; rel
   }, [tip]);
 
   const needLogin = useCallback(() => {
-    void nav({ to: "/login" });
-  }, [nav]);
+    router.push("/login");
+  }, [router]);
 
   const handleTime = (cur: number, dur: number) => {
     if (draggingRef.current) {
@@ -541,7 +542,7 @@ export default function ShortDramaFeed({ resp, reload }: { resp: DetailResp; rel
           >
             <IconButton
               size="small"
-              onClick={() => void nav({ to: "/title/$id", params: { id: String(tid) } })}
+              onClick={() => router.push(`/title/${tid}`)}
               sx={{ color: "#fff", pointerEvents: "auto" }}
             >
               <ChevronLeft size={24} />

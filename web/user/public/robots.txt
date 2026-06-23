@@ -1,8 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /mine
-Disallow: /login
-Disallow: /watch/
-
-# 影视聚合站点。详情/分类/排行/专题等内容页均可抓取。
-# Sitemap: https://your-domain.com/sitemap.xml

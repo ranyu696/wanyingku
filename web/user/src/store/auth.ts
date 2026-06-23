@@ -1,6 +1,7 @@
+"use client";
 import { create } from "zustand";
-import { TOKEN_KEY, USER_KEY } from "../api/client";
-import type { User } from "../api/types";
+import { TOKEN_KEY, USER_KEY } from "@/lib/api";
+import type { User } from "@/lib/types";
 
 // SSR 安全：服务端没有 localStorage，统一走这个守卫
 const ls: Storage | null = typeof localStorage === "undefined" ? null : localStorage;

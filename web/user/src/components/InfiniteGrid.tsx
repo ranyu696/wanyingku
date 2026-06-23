@@ -1,6 +1,7 @@
+"use client";
 import { useEffect, useRef } from "react";
 import { Box, CircularProgress, Typography } from "@mui/material";
-import type { Title } from "../api/types";
+import type { Title } from "@/lib/types";
 import PosterGrid from "./PosterGrid";
 import { Empty, GridSkeleton } from "./State";
 

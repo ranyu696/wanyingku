@@ -1,7 +1,8 @@
+"use client";
 import { Box, Typography } from "@mui/material";
-import { Link } from "@tanstack/react-router";
-import { useRecommend } from "../api/hooks";
-import { useAuth } from "../store/auth";
+import Link from "next/link";
+import { useRecommend } from "@/lib/hooks";
+import { useAuth } from "@/store/auth";
 import PosterImage from "./PosterImage";
 
 // 为你推荐：基于观看历史/收藏的个性化片单，仅登录后展示，空则不渲染。
@@ -40,8 +41,7 @@ export default function RecommendRow() {
           return (
             <Box key={t.id} sx={{ flex: "0 0 auto", width: { xs: 112, sm: 130, md: 150 } }}>
               <Link
-                to="/title/$id"
-                params={{ id: t.slug || String(t.id) }}
+                href={`/title/${t.slug || t.id}`}
                 style={{ textDecoration: "none", color: "inherit" }}
               >
                 <PosterImage src={t.poster} hash={t.poster_blurhash} alt={t.name} adult={t.adult} />

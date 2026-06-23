@@ -1,5 +1,5 @@
 import { Box } from "@mui/material";
-import type { Title } from "../api/types";
+import type { Title } from "@/lib/types";
 import PosterCard from "./PosterCard";
 
 export default function PosterGrid({ items }: { items: Title[] }) {

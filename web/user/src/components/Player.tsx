@@ -1,3 +1,4 @@
+"use client";
 import { useEffect, useRef, useState } from "react";
 import { Box, Button } from "@mui/material";
 import { MediaPlayer, MediaProvider, type MediaPlayerInstance } from "@vidstack/react";

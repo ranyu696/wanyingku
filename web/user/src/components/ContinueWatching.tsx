@@ -1,6 +1,6 @@
 import { Box, LinearProgress, Typography } from "@mui/material";
-import { Link } from "@tanstack/react-router";
-import type { Title } from "../api/types";
+import Link from "next/link";
+import type { Title } from "@/lib/types";
 import PosterImage from "./PosterImage";
 
 export interface HistoryItem {
@@ -46,8 +46,7 @@ export default function ContinueWatching({ items }: { items: HistoryItem[] }) {
           return (
             <Box key={it.id} sx={{ flex: "0 0 auto", width: { xs: 112, sm: 130, md: 150 } }}>
               <Link
-                to="/title/$id"
-                params={{ id: t.slug || String(t.id) }}
+                href={`/title/${t.slug || t.id}`}
                 style={{ textDecoration: "none", color: "inherit" }}
               >
                 <Box sx={{ position: "relative" }}>

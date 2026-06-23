@@ -1,3 +1,4 @@
+"use client";
 import { useState } from "react";
 import {
   Avatar,
@@ -10,13 +11,13 @@ import {
   Typography,
 } from "@mui/material";
 import { ThumbsUp } from "lucide-react";
-import { useNavigate } from "@tanstack/react-router";
-import { useComments, useCommentOps } from "../api/hooks";
-import { useAuth } from "../store/auth";
+import { useRouter } from "next/navigation";
+import { useComments, useCommentOps } from "@/lib/hooks";
+import { useAuth } from "@/store/auth";
 
 export default function Comments({ titleId }: { titleId: number }) {
   const { token } = useAuth();
-  const nav = useNavigate();
+  const router = useRouter();
   const c = useComments(titleId);
   const ops = useCommentOps();
   const [text, setText] = useState("");
@@ -74,7 +75,7 @@ export default function Comments({ titleId }: { titleId: number }) {
           <Typography variant="body2" color="text.secondary">
             登录后参与评论
           </Typography>
-          <Button size="small" variant="contained" onClick={() => void nav({ to: "/login" })}>
+          <Button size="small" variant="contained" onClick={() => router.push("/login")}>
             登录 / 注册
           </Button>
         </Stack>

@@ -1,8 +1,9 @@
+"use client";
 import { useEffect, useRef, useState } from "react";
 import { Box, Chip, IconButton, Stack, Typography } from "@mui/material";
 import { ChevronLeft, ChevronRight, Play } from "lucide-react";
-import { Link } from "@tanstack/react-router";
-import { KIND_LABELS, type Title } from "../api/types";
+import Link from "next/link";
+import { KIND_LABELS, type Title } from "@/lib/types";
 import Blurhash from "./Blurhash";
 
 export default function HeroCarousel({ items }: { items: Title[] }) {
@@ -81,8 +82,7 @@ export default function HeroCarousel({ items }: { items: Title[] }) {
             }}
           >
             <Link
-              to="/title/$id"
-              params={{ id: t.slug || String(t.id) }}
+              href={`/title/${t.slug || t.id}`}
               style={{ display: "block", height: "100%", textDecoration: "none", color: "inherit" }}
             >
               {hash ? (

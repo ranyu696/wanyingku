@@ -1,11 +1,12 @@
+"use client";
 import { Box, Typography } from "@mui/material";
-import { useNavigate } from "@tanstack/react-router";
-import { useCollections } from "../api/hooks";
+import { useRouter } from "next/navigation";
+import { useCollections } from "@/lib/hooks";
 
 export default function Collections() {
   const { data } = useCollections();
   const cols = data ?? [];
-  const nav = useNavigate();
+  const router = useRouter();
   if (cols.length === 0) {
     return null;
   }
@@ -32,7 +33,7 @@ export default function Collections() {
           return (
             <Box
               key={c.key}
-              onClick={() => void nav({ to: "/collection/$key", params: { key: c.key } })}
+              onClick={() => router.push(`/collection/${c.key}`)}
               sx={{
                 flex: "0 0 auto",
                 width: { xs: 200, sm: 240, md: 264 },

@@ -1,17 +1,18 @@
+"use client";
 import { Box, Button } from "@mui/material";
 import { Shuffle } from "lucide-react";
-import { useNavigate } from "@tanstack/react-router";
-import { useRandomTitle } from "../api/hooks";
+import { useRouter } from "next/navigation";
+import { useRandomTitle } from "@/lib/hooks";
 
 // 「今天看点啥」：随机一部，跳到详情。
 export default function RandomPick() {
   const rand = useRandomTitle();
-  const nav = useNavigate();
+  const router = useRouter();
   const go = async () => {
     try {
       const t = await rand.send({});
       if (t?.id) {
-        void nav({ to: "/title/$id", params: { id: t.slug || String(t.id) } });
+        router.push(`/title/${t.slug || t.id}`);
       }
     } catch {
       /* ignore */

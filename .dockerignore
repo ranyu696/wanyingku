@@ -1,6 +1,6 @@
-# 后端镜像只需 Go 源码 + config + migrations。排除移动端/构建产物。
-# 注意：不再排除 web/ —— 前端服务的 Dockerfile 从仓库根构建、需要 web/ 源码（后端 COPY 会带上 web/ 源码，仅源码、可忽略）。
+# 后端镜像只需 Go 源码 + config + migrations。排除前端/移动端/构建产物以缩小构建上下文。
 .git
+web/
 app/
 bin/
 *.log

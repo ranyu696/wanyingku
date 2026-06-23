@@ -172,13 +172,22 @@ async function handle(req, res) {
     }
     const origin = process.env.SITE_URL || `http://${req.headers.host || "localhost"}`;
     const [{ html, ssr }, head] = await Promise.all([render(url), resolveHead(url, origin)]);
+    // emotion(MUI)的 SSR build 把 <style data-emotion> 内联进 #root 组件树，而客户端 build 改用
+    // insertion effect 注入 <head>、首帧不渲染这些 style 元素；React 19 又不 hoist 无 precedence 的
+    // <style> → 水合时 #root 首个子节点(style vs div)结构不一致，报 React #418。
+    // 把内联 style 抽进 <head>：body 即与客户端首帧一致，水合通过；client 的 emotion cache 会认领同名标签。
+    const styles = [];
+    const bodyHtml = html.replace(
+      /<style[^>]*\bdata-emotion=[^>]*>[\s\S]*?<\/style>/g,
+      (m) => (styles.push(m), ""),
+    );
     const dehydrate =
       ssr && Object.keys(ssr).length
         ? `\n    <script>window.__SSR__=${JSON.stringify(ssr).replace(/</g, "\\u003c")}</script>`
         : "";
     const out = template
-      .replace("<!--app-head-->", head + dehydrate)
-      .replace("<!--app-html-->", html);
+      .replace("<!--app-head-->", head + styles.join("") + dehydrate)
+      .replace("<!--app-html-->", bodyHtml);
     res.statusCode = 200;
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.end(out);

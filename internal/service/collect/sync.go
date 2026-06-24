@@ -515,7 +515,9 @@ func (s *Syncer) BackfillOverview(ctx context.Context) int {
 
 // ReindexAll 全量重建 Meili 索引（管理端触发）。返回已索引作品数。
 func (s *Syncer) ReindexAll(ctx context.Context) int {
-	s.search.DeleteAllDocs(ctx) // 先清空，避免合并/删除遗留的死文档残留
+	if err := s.search.ResetIndex(ctx); err != nil { // 硬重置：清队列+删 embedder+重建，避免被旧 embedder 限流拖死
+		slog.Warn("reset index failed", "err", err)
+	}
 	var ids []int64
 	s.db.WithContext(ctx).Model(&model.Title{}).Where("status = 1").Pluck("id", &ids)
 	set := make(map[int64]struct{}, len(ids))

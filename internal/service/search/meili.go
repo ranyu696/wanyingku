@@ -83,12 +83,9 @@ func (s *Service) EnsureIndex(ctx context.Context) error {
 		"sortableAttributes":   []string{"popularity", "year", "vote_average", "updated_at", "latest_episode"},
 		"rankingRules":         []string{"words", "typo", "proximity", "attribute", "sort", "exactness"},
 	}
-	if s.embedder != "" && s.embedCfg != nil {
-		settings["embedders"] = map[string]any{s.embedder: s.embedCfg}
-	} else {
-		// 主动清空历史注册的 embedder：纯文本索引，不再每篇向量化（拖垮全量重建）。
-		settings["embedders"] = map[string]any{}
-	}
+	// 不让 Meili 做向量化(语义走 pgvector)。清掉历史注册的 embedder：embedders:{} 在本版 Meili
+	// 不生效，必须用 reset 端点删除；留着会让每篇文档索引时逐条调嵌入 API、撞限额被限流拖死全量重建。
+	s.http.R().SetContext(ctx).Delete(fmt.Sprintf("/indexes/%s/settings/embedders", s.index))
 	resp, err := s.http.R().SetContext(ctx).SetBody(settings).
 		Patch(fmt.Sprintf("/indexes/%s/settings", s.index))
 	if err != nil {
@@ -128,6 +125,17 @@ func (s *Service) DeleteAllDocs(ctx context.Context) {
 		return
 	}
 	s.http.R().SetContext(ctx).Delete(fmt.Sprintf("/indexes/%s/documents", s.index))
+}
+
+// ResetIndex 硬重置：取消排队/进行中任务(清掉被旧 embedder 限流卡住上千秒的队列)、删索引、再按
+// 当前配置(无 embedder)重建。全量重建前调用，确保不残留 embedder、不被卡住的任务拖死。
+func (s *Service) ResetIndex(ctx context.Context) error {
+	if !s.enabled {
+		return nil
+	}
+	s.http.R().SetContext(ctx).Post("/tasks/cancel?statuses=enqueued,processing")
+	s.http.R().SetContext(ctx).Delete(fmt.Sprintf("/indexes/%s", s.index))
+	return s.EnsureIndex(ctx)
 }
 
 // SearchOptions 搜索参数。

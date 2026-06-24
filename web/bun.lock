@@ -31,34 +31,6 @@
       },
     },
     "user": {
-      "name": "user",
-      "version": "0.0.0",
-      "dependencies": {
-        "@emotion/react": "^11.14.0",
-        "@emotion/styled": "^11.14.1",
-        "@mui/material": "^9.0.1",
-        "@tanstack/react-router": "^1.170.15",
-        "@vidstack/react": "1.15.4",
-        "alova": "^3.5.1",
-        "blurhash": "^2.0.5",
-        "hls.js": "^1.6.16",
-        "lucide-react": "^1.17.0",
-        "react": "^19.2.6",
-        "react-dom": "^19.2.6",
-        "zustand": "^5.0.14",
-      },
-      "devDependencies": {
-        "@types/node": "^24.12.3",
-        "@types/react": "^19.2.14",
-        "@types/react-dom": "^19.2.3",
-        "@vitejs/plugin-react": "^6.0.1",
-        "globals": "^17.6.0",
-        "typescript": "~6.0.2",
-        "vite": "npm:@voidzero-dev/vite-plus-core@latest",
-        "vite-plus": "latest",
-      },
-    },
-    "user-next": {
       "name": "user-next",
       "version": "0.0.0",
       "dependencies": {
@@ -626,9 +598,7 @@
 
     "use-sync-external-store": ["use-sync-external-store@1.6.0", "", { "peerDependencies": { "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-Pp6GSwGP/NrPIrxVFAIkOQeyw8lFenOHijQWkUTrDvrF4ALqylP2C/KCkeS9dpUM3KvYRQhna5vt7IL95+ZQ9w=="],
 
-    "user": ["user@workspace:user"],
-
-    "user-next": ["user-next@workspace:user-next"],
+    "user-next": ["user-next@workspace:user"],
 
     "vite": ["@voidzero-dev/vite-plus-core@0.1.24", "", { "dependencies": { "@oxc-project/runtime": "=0.133.0", "@oxc-project/types": "=0.133.0", "lightningcss": "^1.30.2", "postcss": "^8.5.6" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "peerDependencies": { "@arethetypeswrong/core": "^0.18.1", "@tsdown/css": "0.22.1", "@tsdown/exe": "0.22.1", "@types/node": "^20.19.0 || >=22.12.0", "@vitejs/devtools": "^0.1.18", "esbuild": "^0.27.0 || ^0.28.0", "jiti": ">=1.21.0", "less": "^4.0.0", "publint": "^0.3.8", "sass": "^1.70.0", "sass-embedded": "^1.70.0", "stylus": ">=0.54.8", "sugarss": "^5.0.0", "terser": "^5.16.0", "tsx": "^4.8.1", "typescript": "^5.0.0 || ^6.0.0", "unplugin-unused": "^0.5.0", "unrun": "*", "yaml": "^2.4.2" }, "optionalPeers": ["@arethetypeswrong/core", "@tsdown/css", "@tsdown/exe", "@types/node", "@vitejs/devtools", "esbuild", "jiti", "less", "publint", "sass", "sass-embedded", "stylus", "sugarss", "terser", "tsx", "typescript", "unplugin-unused", "unrun", "yaml"] }, "sha512-iXPGBABnQnrDMx89H6MOCGcTZp+QW+3rY4YMVKdE6ydchSvPk2O3MI2vgaRVfOtWJ2IjnxSnf1n2yjP67ZBRFQ=="],
 

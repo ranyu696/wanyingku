@@ -10,10 +10,16 @@ import (
 	"github.com/xiaoxin/cms/pkg/response"
 )
 
-// AdminReindex 全量重建 Meili 搜索索引。
+// AdminReindex 全量重建 Meili 搜索索引。后台异步跑：90k 量级同步会打爆请求超时、
+// 请求一断 ctx 取消就半途而废。立即返回，重建在背景 context 下完整跑完。
 func (h *Handler) AdminReindex(c echo.Context) error {
-	n := h.Syncer.ReindexAll(c.Request().Context())
-	return response.OK(c, map[string]any{"indexed": n})
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+		defer cancel()
+		n := h.Syncer.ReindexAll(ctx)
+		slog.Info("reindex done", "indexed", n)
+	}()
+	return response.OK(c, map[string]any{"started": true})
 }
 
 // SourceHealthStats 采集源健康监控：每源线路健康分布 + 平均延迟 + 最近同步/探活。

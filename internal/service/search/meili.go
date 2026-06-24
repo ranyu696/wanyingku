@@ -48,31 +48,10 @@ func New(cfg *config.Config) *Service {
 		h.SetAuthToken(cfg.Meili.APIKey)
 	}
 	s := &Service{http: h, index: cfg.Meili.Index, enabled: cfg.Meili.Enabled}
-	// 语义搜索 embedder：接 OpenAI 兼容嵌入端点（Gemini 等）。单条 input 提交，Meili 后台异步嵌入。
-	if cfg.Meili.EmbedEnabled && cfg.Meili.EmbedAPIKey != "" {
-		model := cfg.Meili.EmbedModel
-		if model == "" {
-			model = "gemini-embedding-001"
-		}
-		url := cfg.Meili.EmbedURL
-		if url == "" {
-			url = "https://generativelanguage.googleapis.com/v1beta/openai/embeddings"
-		}
-		dim := cfg.Meili.EmbedDim
-		if dim == 0 {
-			dim = 768
-		}
-		s.embedder = "gemini"
-		s.embedCfg = map[string]any{
-			"source":           "rest",
-			"url":              url,
-			"apiKey":           cfg.Meili.EmbedAPIKey,
-			"dimensions":       dim,
-			"documentTemplate": "{{doc.name}}. {{doc.overview}}",
-			"request":          map[string]any{"model": model, "input": "{{text}}", "dimensions": dim},
-			"response":         map[string]any{"data": []any{map[string]any{"embedding": "{{embedding}}"}}},
-		}
-	}
+	// 不给 Meili 注册 embedder：搜索只用 Meili 做关键词匹配，语义搜索走独立的 pgvector。
+	// 此前给 Meili 配 gemini embedder，会让每篇文档索引时同步向量化(逐条调嵌入 API)，
+	// 90k 量级直接拖垮全量重建(只成功 ~1901 篇)，而这些向量根本没被搜索用到。
+	// cfg.Meili.Embed* 暂保留以备日后真要上 Meili 混合搜索时重启用。
 	return s
 }
 
@@ -106,6 +85,9 @@ func (s *Service) EnsureIndex(ctx context.Context) error {
 	}
 	if s.embedder != "" && s.embedCfg != nil {
 		settings["embedders"] = map[string]any{s.embedder: s.embedCfg}
+	} else {
+		// 主动清空历史注册的 embedder：纯文本索引，不再每篇向量化（拖垮全量重建）。
+		settings["embedders"] = map[string]any{}
 	}
 	resp, err := s.http.R().SetContext(ctx).SetBody(settings).
 		Patch(fmt.Sprintf("/indexes/%s/settings", s.index))

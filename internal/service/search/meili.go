@@ -83,10 +83,13 @@ func (s *Service) EnsureIndex(ctx context.Context) error {
 	if !s.enabled {
 		return nil
 	}
-	// 创建索引（已存在会返回任务，忽略错误）
-	s.http.R().SetContext(ctx).
-		SetBody(map[string]any{"uid": s.index, "primaryKey": "id"}).
-		Post("/indexes")
+	// 索引已存在就不再创建：直接 POST /indexes 会让 Meili 跑一个注定失败的建索引任务并刷 ERROR 日志。
+	// 先 GET 探存在，仅 404（或探测失败）时才创建。
+	if resp, _ := s.http.R().SetContext(ctx).Get(fmt.Sprintf("/indexes/%s", s.index)); resp == nil || resp.StatusCode() == 404 {
+		s.http.R().SetContext(ctx).
+			SetBody(map[string]any{"uid": s.index, "primaryKey": "id"}).
+			Post("/indexes")
+	}
 
 	// 语义搜索：开启实验特性 vectorStore（v1.12 需要；新版已 GA，重复设置无害），并注册 embedder。
 	if s.embedder != "" {

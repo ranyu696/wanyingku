@@ -76,6 +76,17 @@ export default function Sources() {
       /* ignore */
     }
   };
+  const reindex = async () => {
+    if (!window.confirm("重建全部搜索索引？将索引约 9 万部，耗时几分钟、后台进行。")) {
+      return;
+    }
+    try {
+      await ops.reindex.send();
+      window.alert("重建已在后台开始，几分钟后搜索即可覆盖全部影片。");
+    } catch {
+      window.alert("触发失败，请重试。");
+    }
+  };
 
   const list = sources.data ?? [];
   return (
@@ -84,6 +95,14 @@ export default function Sources() {
         title="采集源"
         action={
           <Stack direction="row" spacing={1}>
+            <Button
+              variant="outlined"
+              color="secondary"
+              disabled={ops.reindex.loading}
+              onClick={() => void reindex()}
+            >
+              {ops.reindex.loading ? "触发中…" : "重建索引"}
+            </Button>
             <Button variant="outlined" onClick={() => void ops.syncAll.send(false)}>
               全部增量采集
             </Button>

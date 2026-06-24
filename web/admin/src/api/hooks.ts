@@ -70,7 +70,9 @@ export function useSourceOps() {
   const syncAll = useRequest((full: boolean) => alova.Post(`/admin/sync-all?full=${full ? 1 : 0}`), {
     immediate: false,
   });
-  return { create, update, remove, sync, syncAll };
+  // 全量重建搜索索引（后端后台异步跑，立即返回）
+  const reindex = useRequest(() => alova.Post("/admin/reindex"), { immediate: false });
+  return { create, update, remove, sync, syncAll, reindex };
 }
 
 export function useMergeTitles() {

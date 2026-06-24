@@ -5,6 +5,7 @@ import Link from "next/link";
 import { serverGetSafe } from "@/lib/api";
 import { BRAND } from "@/lib/site";
 import { KIND_LABELS, type Paged, type Title } from "@/lib/types";
+import Blurhash from "@/components/Blurhash";
 import PosterImage from "@/components/PosterImage";
 import RankToggles from "@/components/RankToggles";
 import { Empty } from "@/components/State";
@@ -30,7 +31,9 @@ function meta(t: Title): string {
   return [KIND_LABELS[t.kind], t.year || "", t.area || ""].filter(Boolean).join(" · ");
 }
 
+// 榜首大图：移动 16:9，桌面用更扁的影院比例（5:2）避免满屏占高
 function Hero({ t, sort }: { t: Title; sort: string }) {
+  const hash = t.backdrop_blurhash || t.poster_blurhash;
   return (
     <Link href={`/title/${t.slug || t.id}`} style={{ textDecoration: "none", color: "inherit" }}>
       <Box
@@ -40,14 +43,21 @@ function Hero({ t, sort }: { t: Title; sort: string }) {
           borderRadius: "16px",
           overflow: "hidden",
           boxShadow: "0 16px 40px rgba(0,0,0,.5)",
+          aspectRatio: { xs: "16 / 9", md: "5 / 2" },
+          bgcolor: "#101019",
         }}
       >
-        <PosterImage
+        {hash ? (
+          <Box sx={{ position: "absolute", inset: 0 }}>
+            <Blurhash hash={hash} />
+          </Box>
+        ) : null}
+        <Box
+          component="img"
           src={t.backdrop || t.poster}
-          hash={t.backdrop_blurhash || t.poster_blurhash}
-          ratio="16 / 9"
           alt={t.name}
-          adult={t.adult}
+          loading="eager"
+          sx={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
         />
         <Box
           sx={{
@@ -57,13 +67,13 @@ function Hero({ t, sort }: { t: Title; sort: string }) {
               "linear-gradient(90deg, rgba(0,0,0,.85) 0%, rgba(0,0,0,.4) 45%, transparent 75%)",
           }}
         />
-        <Box sx={{ position: "absolute", left: 0, bottom: 0, p: { xs: 2, md: 3 }, maxWidth: "85%" }}>
+        <Box sx={{ position: "absolute", left: 0, bottom: 0, p: { xs: 2, md: 4 }, maxWidth: { xs: "85%", md: "60%" } }}>
           <Typography
             sx={{
               fontWeight: 900,
               fontStyle: "italic",
               lineHeight: 0.9,
-              fontSize: { xs: "3.4rem", md: "5rem" },
+              fontSize: { xs: "3.4rem", md: "5.5rem" },
               background: "linear-gradient(135deg,#ff3d5a,#ffb13d)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
@@ -71,7 +81,7 @@ function Hero({ t, sort }: { t: Title; sort: string }) {
           >
             1
           </Typography>
-          <Typography variant="h6" sx={{ color: "#fff", fontWeight: 800, mt: 0.5 }} noWrap>
+          <Typography variant="h6" sx={{ color: "#fff", fontWeight: 800, mt: 0.5, fontSize: { md: "1.6rem" } }} noWrap>
             {t.name}
           </Typography>
           <Typography variant="body2" sx={{ color: "rgba(255,255,255,.75)", mb: 1 }} noWrap>
@@ -112,7 +122,12 @@ function PodiumCard({ t, rank, sort }: { t: Title; rank: number; sort: string })
             fontStyle: "italic",
             fontSize: 15,
             color: "#fff",
-            bgcolor: rank === 2 ? "rgba(160,170,190,.95)" : "rgba(205,127,80,.95)",
+            bgcolor:
+              rank === 2
+                ? "rgba(160,170,190,.95)"
+                : rank === 3
+                  ? "rgba(205,127,80,.95)"
+                  : "rgba(20,20,29,.85)",
           }}
         >
           {rank}
@@ -179,21 +194,39 @@ export default async function RankPage({ searchParams }: SP) {
       ) : (
         <Box>
           <Hero t={list[0]} sort={sort} />
-          {list.length > 1 ? (
-            <Stack direction="row" spacing={1.5} sx={{ px: { xs: 1.5, md: 2 }, mt: 2 }}>
-              {list.slice(1, 3).map((t, i) => (
-                <PodiumCard key={t.id} t={t} rank={i + 2} sort={sort} />
-              ))}
-            </Stack>
-          ) : null}
+
+          {/* 移动：2-3 名领奖台（2 张） */}
+          <Box sx={{ display: { xs: "grid", md: "none" }, gridTemplateColumns: "1fr 1fr", gap: 1.5, px: 1.5, mt: 2 }}>
+            {list.slice(1, 3).map((t, i) => (
+              <PodiumCard key={t.id} t={t} rank={i + 2} sort={sort} />
+            ))}
+          </Box>
+
+          {/* 桌面：2-5 名领奖台（4 张，铺满宽度） */}
+          <Box sx={{ display: { xs: "none", md: "grid" }, gridTemplateColumns: "repeat(4, 1fr)", gap: 2, px: 2, mt: 2 }}>
+            {list.slice(1, 5).map((t, i) => (
+              <PodiumCard key={t.id} t={t} rank={i + 2} sort={sort} />
+            ))}
+          </Box>
+
+          {/* 移动：4 名起单列 */}
           <Stack
-            sx={{ px: { xs: 1.5, md: 2 }, mt: 2, gap: 0.5 }}
+            sx={{ display: { xs: "flex", md: "none" }, px: 1.5, mt: 2, gap: 0.5 }}
             divider={<Box sx={{ borderTop: "1px solid", borderColor: "divider" }} />}
           >
             {list.slice(3).map((t, i) => (
               <RankRow key={t.id} t={t} rank={i + 4} sort={sort} />
             ))}
           </Stack>
+
+          {/* 桌面：6 名起两列 */}
+          <Box sx={{ display: { xs: "none", md: "grid" }, gridTemplateColumns: "1fr 1fr", columnGap: 4, px: 2, mt: 2 }}>
+            {list.slice(5).map((t, i) => (
+              <Box key={t.id} sx={{ borderBottom: "1px solid", borderColor: "divider" }}>
+                <RankRow t={t} rank={i + 6} sort={sort} />
+              </Box>
+            ))}
+          </Box>
         </Box>
       )}
     </Box>

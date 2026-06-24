@@ -190,10 +190,8 @@ func (s *Service) Search(ctx context.Context, opt SearchOptions) ([]int64, int64
 	if opt.Sort != "" {
 		body["sort"] = []string{opt.Sort}
 	}
-	// 启用 embedder 时走混合搜索：关键词 + 语义各半（semanticRatio=0.5）。
-	if s.embedder != "" {
-		body["hybrid"] = map[string]any{"semanticRatio": 0.5, "embedder": s.embedder}
-	}
+	// 关键词搜索走纯关键词匹配。语义搜索是独立路径（mode=semantic → AI embedding + pgvector），
+	// 不在这里掺 hybrid——此前无条件 semanticRatio=0.5 会把精确匹配(如「痴迷」)冲散、命中数暴涨。
 	var out searchResp
 	resp, err := s.http.R().SetContext(ctx).SetBody(body).SetResult(&out).
 		Post(fmt.Sprintf("/indexes/%s/search", s.index))

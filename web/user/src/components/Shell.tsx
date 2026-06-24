@@ -48,8 +48,14 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   const tabs = [...mainNavs, account];
   const current = tabs.findIndex((n) => isActive(pathname, n.path));
 
+  // 播放页不显示导航壳，但仍套顶层最大宽度容器（桌面居中限宽，不满屏拉伸）。
+  // 短剧的 9:16 沉浸流是 position:fixed 全屏浮层，自然不受此容器影响。
   if (bare) {
-    return <>{children}</>;
+    return (
+      <Box component="main" sx={{ maxWidth: MAXW, mx: "auto", width: "100%" }}>
+        {children}
+      </Box>
+    );
   }
 
   return (

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Box, Typography } from "@mui/material";
 import { EyeOff } from "lucide-react";
 import Blurhash from "./Blurhash";
@@ -18,9 +18,19 @@ interface Props {
 export default function PosterImage({ src, hash, alt = "", ratio = "2 / 3", adult = false }: Props) {
   const [loaded, setLoaded] = useState(false);
   const [revealed, setRevealed] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
   const [w, h] = ratio.split("/").map((s) => Number(s.trim()) || 1);
   const pad = `${(h / w) * 100}%`; // 2/3 → 150%，16/9 → 56.25%
   const masked = adult && !revealed;
+
+  // SSR：服务端渲染的 <img> 常在 React hydrate 前就加载完，onLoad 事件错过 →
+  // loaded 永远 false，图片停在 opacity:0、只剩 blurhash。挂载后补查 complete 兜底。
+  useEffect(() => {
+    const img = imgRef.current;
+    if (img?.complete && img.naturalWidth > 0) {
+      setLoaded(true);
+    }
+  }, [src]);
   return (
     <Box
       sx={{
@@ -41,6 +51,7 @@ export default function PosterImage({ src, hash, alt = "", ratio = "2 / 3", adul
       {src ? (
         <Box
           component="img"
+          ref={imgRef}
           src={src}
           alt={alt}
           loading="lazy"

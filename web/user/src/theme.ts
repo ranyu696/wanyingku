@@ -72,7 +72,22 @@ export const theme = createTheme({
         },
       ],
     },
-    MuiChip: { styleOverrides: { root: { borderRadius: 9, fontWeight: 600 } } },
+    MuiChip: {
+      styleOverrides: { root: { borderRadius: 9, fontWeight: 600 } },
+      // 填充色芯片白字对比度修复（小字 WCAG AA 需 ≥4.5:1）：
+      // primary #ff3d5a=3.46 → #d4143c=5.30；secondary #8b5cf6=4.23 → #7c3aed=5.70
+      // success/warning/info 由 MUI 自动取深色字配浅底，已达标，无需改
+      variants: [
+        {
+          props: { color: "primary", variant: "filled" },
+          style: { backgroundColor: "#d4143c", color: "#fff" },
+        },
+        {
+          props: { color: "secondary", variant: "filled" },
+          style: { backgroundColor: "#7c3aed", color: "#fff" },
+        },
+      ],
+    },
     MuiAppBar: { styleOverrides: { root: { backgroundImage: "none" } } },
     MuiDialog: { styleOverrides: { paper: { backgroundImage: "none", borderRadius: 20 } } },
     MuiLinearProgress: { styleOverrides: { root: { borderRadius: 4 } } },

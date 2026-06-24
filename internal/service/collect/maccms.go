@@ -199,6 +199,17 @@ func ParsePlay(playFrom, playURL string) []PlayGroup {
 	return out
 }
 
+// MaxEpisodes 返回各线路里最多的分集数（用于按集数判断短剧/连续剧）。
+func MaxEpisodes(groups []PlayGroup) int {
+	n := 0
+	for _, g := range groups {
+		if len(g.Episodes) > n {
+			n = len(g.Episodes)
+		}
+	}
+	return n
+}
+
 func looksLikeURL(s string) bool {
 	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://") ||
 		strings.Contains(s, ".m3u8") || strings.Contains(s, ".mp4")

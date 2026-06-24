@@ -145,6 +145,9 @@ func (s *Syncer) processItem(ctx context.Context, src *model.Source, item *VodIt
 		return 0, false, nil // 新闻/预告等噪声，不入库
 	}
 	kind := ClassifyKind(item.TypeName, root) // 叶子优先，顶级分类兜底
+	groups := ParsePlay(item.VodPlayFrom, item.VodPlayURL)
+	// 短剧纠偏：被判电影但分集很多 → 短剧（源常把微短剧挂在电影/泛题材下）。
+	kind = FixShortByEpisodes(kind, MaxEpisodes(groups))
 	year := item.Year()
 	if year == 0 {
 		year = textutil.ExtractYear(name)
@@ -197,7 +200,6 @@ func (s *Syncer) processItem(ctx context.Context, src *model.Source, item *VodIt
 		return res.TitleID, res.Created, err
 	}
 
-	groups := ParsePlay(item.VodPlayFrom, item.VodPlayURL)
 	s.writePlay(ctx, src, res.TitleID, si.ID, groups, item)
 	s.updateTitleAggregates(ctx, res.TitleID, item)
 	if IsAdult(item.TypeName) || IsAdult(root) { // 成人内容打标记（伦理片/里番），叶子+顶级都查

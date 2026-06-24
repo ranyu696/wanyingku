@@ -6,6 +6,10 @@ import (
 	"github.com/xiaoxin/cms/internal/model"
 )
 
+// shortDramaEpMin 微短剧最小分集阈值：被判电影但分集 ≥ 此数 → 纠正为短剧。
+// 电影/电影合集不会有这么多集；源常把微短剧挂在「电影」或泛题材下，靠集数兜底纠偏。
+const shortDramaEpMin = 20
+
 // guessKindMatched 由 type_name 推断类型；matched=false 表示没命中任何媒介标记、落到了默认(电影)。
 func guessKindMatched(typeName string) (int16, bool) {
 	s := strings.TrimSpace(typeName)
@@ -55,6 +59,15 @@ func ClassifyKind(leaf, root string) int16 {
 		}
 	}
 	return model.KindMovie
+}
+
+// FixShortByEpisodes 短剧纠偏：被判电影但分集数 ≥ shortDramaEpMin → 纠正为短剧；其余原样。
+// 源常把微短剧挂在「电影」或泛题材下(落到默认电影)，但电影/合集不会有几十上百集。
+func FixShortByEpisodes(kind int16, episodes int) int16 {
+	if kind == model.KindMovie && episodes >= shortDramaEpMin {
+		return model.KindShort
+	}
+	return kind
 }
 
 // IsJunkType 纯噪声类型（新闻资讯/预告片/娱乐新闻），不入库。

@@ -2,7 +2,13 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "RAILPACK",
-    "buildCommand": "bun install --frozen-lockfile && cd admin && bun run build"
+    "buildCommand": "bun install --frozen-lockfile && cd admin && bun run build",
+    "watchPatterns": [
+      "web/admin/**",
+      "web/package.json",
+      "web/bun.lock",
+      "web/railway.admin.json"
+    ]
   },
   "deploy": {
     "startCommand": "cd admin && bunx serve -s dist -l ${PORT:-8080}",

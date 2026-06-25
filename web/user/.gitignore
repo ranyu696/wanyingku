@@ -6,3 +6,6 @@
 .DS_Store
 *.local
 next-env.d.ts
+
+# TS 增量构建缓存（每次构建重生成）
+*.tsbuildinfo

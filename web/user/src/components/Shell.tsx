@@ -71,13 +71,19 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         }}
       >
         <Toolbar sx={{ maxWidth: MAXW, mx: "auto", width: "100%", minHeight: { xs: 52, md: 60 } }}>
-          <Typography
-            variant="h6"
+          <Box
+            component="img"
+            src="/logo.png"
+            alt="万影库"
             onClick={() => router.push("/")}
-            sx={{ fontWeight: 800, letterSpacing: 1, cursor: "pointer", userSelect: "none" }}
-          >
-            <span style={{ color: "#ff4d5e" }}>万</span>影库
-          </Typography>
+            sx={{
+              height: { xs: 28, md: 34 },
+              width: "auto",
+              display: "block",
+              cursor: "pointer",
+              userSelect: "none",
+            }}
+          />
 
           {/* 桌面：主导航 */}
           <Stack direction="row" spacing={0.5} sx={{ ml: 4, display: { xs: "none", md: "flex" } }}>

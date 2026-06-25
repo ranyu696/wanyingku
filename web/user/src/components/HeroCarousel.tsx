@@ -6,6 +6,18 @@ import Link from "next/link";
 import { KIND_LABELS, type Title } from "@/lib/types";
 import Blurhash from "./Blurhash";
 
+// 首屏大图按显示宽取图：自有图床支持 ?w= 缩放，避免下/解码 3840px 原图（移动端 LCP/解码杀手）。
+const HERO_WIDTHS = [640, 960, 1280, 1920];
+function heroImg(url: string): { src: string; srcSet?: string } {
+  if (!url.includes("/api/v1/img/")) {
+    return { src: url };
+  }
+  return {
+    src: `${url}?w=1280`, // 不支持 srcset 时的兜底，也远小于原图
+    srcSet: HERO_WIDTHS.map((w) => `${url}?w=${w} ${w}w`).join(", "),
+  };
+}
+
 export default function HeroCarousel({ items }: { items: Title[] }) {
   const list = items.filter((t) => !t.adult).slice(0, 6); // 成人内容不进首页大图
   const [idx, setIdx] = useState(0);
@@ -92,7 +104,8 @@ export default function HeroCarousel({ items }: { items: Title[] }) {
               ) : null}
               <Box
                 component="img"
-                src={t.backdrop || t.poster}
+                {...heroImg(t.backdrop || t.poster || "")}
+                sizes="(max-width: 1320px) 100vw, 1320px"
                 alt={t.name}
                 loading={i === 0 ? "eager" : "lazy"}
                 fetchPriority={i === 0 ? "high" : "auto"}

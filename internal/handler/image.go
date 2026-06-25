@@ -14,7 +14,8 @@ import (
 )
 
 // 允许的缩放宽度（与前端 srcset 对齐）；其余宽度按原图返回，避免缓存碎片化/被滥用。
-var imgWidths = map[int]bool{200: true, 400: true, 640: true}
+// 200/400/640 海报档；960/1280/1920 首屏 backdrop 大图档（原图常 3840px，移动端解码慢）。
+var imgWidths = map[int]bool{200: true, 400: true, 640: true, 960: true, 1280: true, 1920: true}
 
 // ImageProxy 私有桶图片分发（后端代理）：服务端用私有凭据从桶取流，直接吐给浏览器。
 // 全程走自有域名 api.wanyingku.com,不暴露对象存储域名。加长缓存(内容按 sha1 寻址,不可变)

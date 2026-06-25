@@ -186,6 +186,9 @@ func ParsePlay(playFrom, playURL string) []PlayGroup {
 			if url == "" || !looksLikeURL(url) {
 				continue
 			}
+			if !isDirectM3U8(url) {
+				continue // 只采集直链 m3u8：丢弃云播分享页(/share/..)、解析线、mp4 等播放器播不了的线路
+			}
 			if name == "" {
 				name = "第" + strconv.Itoa(len(eps)+1) + "集"
 			}
@@ -213,6 +216,15 @@ func MaxEpisodes(groups []PlayGroup) int {
 func looksLikeURL(s string) bool {
 	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://") ||
 		strings.Contains(s, ".m3u8") || strings.Contains(s, ".mp4")
+}
+
+// isDirectM3U8 判定是否为可直链播放的 m3u8（忽略 ?query / #fragment）。
+// 云播分享页(/share/..)、解析线、mp4 一律排除——播放器只吃 HLS 直链。
+func isDirectM3U8(u string) bool {
+	if i := strings.IndexAny(u, "?#"); i >= 0 {
+		u = u[:i]
+	}
+	return strings.HasSuffix(strings.ToLower(u), ".m3u8")
 }
 
 // ParseVodTime 解析 MacCMS 的时间字符串。

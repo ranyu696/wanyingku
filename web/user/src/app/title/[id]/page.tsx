@@ -3,6 +3,7 @@ import { type ReactNode } from "react";
 import { Box, Chip, Stack, Typography } from "@mui/material";
 import { Play } from "lucide-react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { getDetail } from "@/lib/cached";
 import { KIND_LABELS } from "@/lib/types";
 import { DEF_TITLE, SITE_URL } from "@/lib/site";
@@ -47,7 +48,7 @@ export default async function DetailPage({ params }: Params) {
   const data = await getDetail(id);
   const detail = data?.detail;
   if (!detail) {
-    return <Empty text="影片不存在" />;
+    notFound(); // 真 404 + noindex，不被收录（PPR 流式下状态码为 200，靠 noindex 防收录）
   }
 
   const origin = SITE_URL;

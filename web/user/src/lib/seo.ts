@@ -20,14 +20,27 @@ export function detailLd(d: TitleDetail, origin: string): Record<string, any> {
     name: d.name,
     url: `${origin}/title/${d.slug || d.id}`,
   };
-  if (d.poster) {
-    obj.image = d.poster;
+  // 别名（原名 + 收录别名）：助跨语言/异名匹配
+  const alts = [d.original_name, ...(d.aliases || [])]
+    .map((s) => String(s || "").trim())
+    .filter((s) => s && s !== d.name)
+    .filter((s, i, a) => a.indexOf(s) === i);
+  if (alts.length) {
+    obj.alternateName = alts.length === 1 ? alts[0] : alts;
+  }
+  // 海报 + 剧照（均为绝对 URL）：富结果偏好多图/高清
+  const imgs = [d.poster, d.backdrop].filter(Boolean);
+  if (imgs.length) {
+    obj.image = imgs;
   }
   if (d.overview) {
     obj.description = String(d.overview).replace(/\s+/g, " ").trim();
   }
   if (d.year) {
     obj.datePublished = String(d.year);
+  }
+  if (d.area) {
+    obj.countryOfOrigin = { "@type": "Country", name: d.area };
   }
   const genres = (d.genres || []).map((g) => g.name).filter(Boolean);
   if (genres.length) {
@@ -41,14 +54,16 @@ export function detailLd(d: TitleDetail, origin: string): Record<string, any> {
   if (actors.length) {
     obj.actor = actors.map((n) => ({ "@type": "Person", name: n }));
   }
+  // 仅在有真实评分票数时输出（伪造 ratingCount 会被 Google 判无效/弱评分）
   const rating = d.vote_average || d.douban_rating || 0;
   const count = d.vote_count || d.douban_votes || 0;
-  if (rating > 0) {
+  if (rating > 0 && count > 0) {
     obj.aggregateRating = {
       "@type": "AggregateRating",
       ratingValue: Number(rating).toFixed(1),
       bestRating: 10,
-      ratingCount: count > 0 ? count : 1,
+      worstRating: 1,
+      ratingCount: count,
     };
   }
   if (isSeries && d.total_episodes > 0) {

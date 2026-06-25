@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   title: DEF_TITLE,
   description: DEF_DESC,
   manifest: "/manifest.webmanifest",
-  icons: { icon: "/favicon.svg" },
+  // icon 走文件约定：app/favicon.ico + app/apple-icon.png（Next 自动注入 link）
   verification: { yandex: "9953cfca35e0410f" },
   openGraph: {
     siteName: BRAND,

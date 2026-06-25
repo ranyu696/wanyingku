@@ -54,3 +54,12 @@ export async function getCollection(key: string) {
   cacheLife("minutes");
   return serverGetSafe<CollectionData>(`/collections/${key}`, { size: 60 });
 }
+
+// sitemap 分片数据：缓存(每片~1.2MB)，避免每次现取 Go API+现拼(2.8~5s 致 Google 抓取超时)。
+export async function getSitemapPage(page: number) {
+  "use cache";
+  cacheLife("hours");
+  return serverGetSafe<Array<{ id: number; slug?: string; updated_at?: string }>>("/sitemap", {
+    page,
+  });
+}

@@ -1,11 +1,11 @@
 import type { MetadataRoute } from "next";
-import { serverGetSafe } from "@/lib/api";
+import { getSitemapPage } from "@/lib/cached";
 import { SITE_URL } from "@/lib/site";
 import { sitemapChunks } from "@/lib/sitemap";
 
 // 影片十几万 > sitemap 单文件 5 万上限 → 拆成多个 /sitemap/{id}.xml（robots 列全部分片）。
-// 运行时生成、取数不缓存：避开构建期对后端的不稳定大请求 + 跨构建复用的陈旧 fetch 缓存
-// （这俩此前把分片缓存成空/旧尺寸）。sitemap 抓取频率低，运行时取数可接受。
+// 分片数据用 use cache 缓存（每片 <2MB）：现取现拼要 2.8~5s、致 Google 抓取超时「无法抓取」；
+// 缓存后秒出、且发 s-maxage 可被 CF 边缘缓存。
 
 export async function generateSitemaps() {
   const chunks = await sitemapChunks();
@@ -21,10 +21,7 @@ export default async function sitemap({ id }: { id: Promise<string> }): Promise<
       entries.push({ url: `${SITE_URL}${p}` });
     }
   }
-  const list =
-    (await serverGetSafe<Array<{ id: number; slug?: string; updated_at?: string }>>("/sitemap", {
-      page,
-    })) ?? [];
+  const list = (await getSitemapPage(page)) ?? [];
   for (const t of list) {
     entries.push({
       url: `${SITE_URL}/title/${t.slug || t.id}`,

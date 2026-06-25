@@ -53,7 +53,8 @@ export async function serverGet<T>(path: string, params?: Params, revalidate = 6
   return unwrap<T>(res);
 }
 
-// 服务端取数的「软」版本：失败返回 null（用于 generateMetadata / 详情页兜底，不抛 500）
+// 服务端取数的「软」版本：失败返回 null（用于 generateMetadata / sitemap / 详情页兜底，不抛 500）。
+// 失败重试一次：构建期首个/大响应偶发取数失败(冷连接/瞬时)，重试常成功，避免被缓存成空结果。
 export async function serverGetSafe<T>(
   path: string,
   params?: Params,
@@ -62,7 +63,11 @@ export async function serverGetSafe<T>(
   try {
     return await serverGet<T>(path, params, revalidate);
   } catch {
-    return null;
+    try {
+      return await serverGet<T>(path, params, revalidate);
+    } catch {
+      return null;
+    }
   }
 }
 

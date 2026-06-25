@@ -19,8 +19,9 @@ func (h *Handler) Sitemap(c echo.Context) error {
 	}
 	var rows []row
 	// ponytail: 按主键 id 取（走 PK 索引，廉价、抗写入并发）；站点地图顺序对爬虫无意义。
-	// 分页：每页 50000 = sitemap 单文件协议上限。?page 从 0 起，前端按总数拆 sitemap index。
-	const size = 50000
+	// 分页：?page 从 0 起，前端按总数拆 sitemap index。每页 15000（远小于 50000 协议上限），
+	// 响应 <2MB、快且稳——大响应在前端构建期偶发取数失败会缓存成空片。
+	const size = 15000
 	page := qInt(c, "page", 0)
 	if page < 0 {
 		page = 0

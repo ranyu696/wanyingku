@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Box, Chip, Stack, Typography } from "@mui/material";
 import { Play } from "lucide-react";
 import Link from "next/link";
-import { serverGetSafe } from "@/lib/api";
+import { getTitles } from "@/lib/cached";
 import { BRAND } from "@/lib/site";
 import { KIND_LABELS, type Paged, type Title } from "@/lib/types";
 import Blurhash from "@/components/Blurhash";
@@ -10,7 +10,6 @@ import PosterImage from "@/components/PosterImage";
 import RankToggles from "@/components/RankToggles";
 import { Empty } from "@/components/State";
 
-export const revalidate = 60;
 
 export const metadata: Metadata = { title: `影视排行榜 - ${BRAND}` };
 
@@ -179,7 +178,7 @@ export default async function RankPage({ searchParams }: SP) {
   const sp = await searchParams;
   const sort = sp.sort || "popular";
   const kind = sp.kind ? Number(sp.kind) : 0;
-  const data = await serverGetSafe<Paged<Title>>("/titles", {
+  const data = await getTitles({
     kind: kind || undefined,
     sort,
     size: 50,

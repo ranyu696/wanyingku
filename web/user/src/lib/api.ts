@@ -44,27 +44,20 @@ async function unwrap<T>(res: Response): Promise<T> {
   return body as T;
 }
 
-// 服务端取数：匿名 + Next ISR 缓存。revalidate 传 0 表示不缓存。
-export async function serverGet<T>(path: string, params?: Params, revalidate = 60): Promise<T> {
-  const res = await fetch(buildUrl(path, params), {
-    next: revalidate > 0 ? { revalidate } : undefined,
-    ...(revalidate > 0 ? {} : { cache: "no-store" }),
-  });
+// 服务端取数：匿名。cacheComponents 下默认动态(无缓存)；需缓存的在 lib/cached.ts 用 "use cache" 包装。
+export async function serverGet<T>(path: string, params?: Params): Promise<T> {
+  const res = await fetch(buildUrl(path, params));
   return unwrap<T>(res);
 }
 
 // 服务端取数的「软」版本：失败返回 null（用于 generateMetadata / sitemap / 详情页兜底，不抛 500）。
-// 失败重试一次：构建期首个/大响应偶发取数失败(冷连接/瞬时)，重试常成功，避免被缓存成空结果。
-export async function serverGetSafe<T>(
-  path: string,
-  params?: Params,
-  revalidate = 60,
-): Promise<T | null> {
+// 失败重试一次：首个/大响应偶发取数失败(冷连接/瞬时)，重试常成功。
+export async function serverGetSafe<T>(path: string, params?: Params): Promise<T | null> {
   try {
-    return await serverGet<T>(path, params, revalidate);
+    return await serverGet<T>(path, params);
   } catch {
     try {
-      return await serverGet<T>(path, params, revalidate);
+      return await serverGet<T>(path, params);
     } catch {
       return null;
     }

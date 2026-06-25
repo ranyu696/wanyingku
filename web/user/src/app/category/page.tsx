@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Box, Typography } from "@mui/material";
-import { serverGetSafe } from "@/lib/api";
+import { getGenres, getTags, getTitles } from "@/lib/cached";
 import { BRAND } from "@/lib/site";
 import { KIND_LABELS, type Genre, type Paged, type Title } from "@/lib/types";
 import CategoryFilters from "@/components/CategoryFilters";
@@ -8,7 +8,6 @@ import Pager from "@/components/Pager";
 import PosterGrid from "@/components/PosterGrid";
 import { Empty } from "@/components/State";
 
-export const revalidate = 60;
 
 const KIND_SHORT = 6;
 const KINDS = [1, 2, 4, 3, 6, 5, 7];
@@ -52,9 +51,9 @@ export default async function CategoryPage({ searchParams }: SP) {
 
   // 服务端取数：题材/标签（渲染筛选条）+ 当前筛选下的影片列表
   const [genresData, tagsData, titlesData] = await Promise.all([
-    isShort ? Promise.resolve<Genre[]>([]) : serverGetSafe<Genre[]>("/genres", { kind: f.kind }, 300),
-    isShort ? serverGetSafe<string[]>("/tags", { kind: f.kind }, 300) : Promise.resolve<string[]>([]),
-    serverGetSafe<Paged<Title>>("/titles", {
+    isShort ? Promise.resolve<Genre[]>([]) : getGenres(f.kind),
+    isShort ? getTags(f.kind) : Promise.resolve<string[]>([]),
+    getTitles({
       kind: f.kind,
       genre: f.genre || undefined,
       tag: isShort && f.tag ? f.tag : undefined,

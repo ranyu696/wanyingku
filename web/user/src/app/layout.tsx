@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { BRAND, DEF_DESC, DEF_TITLE, SITE_URL } from "@/lib/site";
 import Providers from "@/components/Providers";
 import Shell from "@/components/Shell";
@@ -35,7 +36,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="zh-CN" suppressHydrationWarning>
       <body>
         <Providers>
-          <Shell>{children}</Shell>
+          {/* Shell 读 usePathname(请求期数据)，PPR 下用 Suspense 包住：html/body 作静态壳秒发，导航+页面流式补入 */}
+          <Suspense fallback={null}>
+            <Shell>{children}</Shell>
+          </Suspense>
         </Providers>
       </body>
     </html>

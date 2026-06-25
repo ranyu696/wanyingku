@@ -6,7 +6,7 @@ export const SITEMAP_CHUNK = 15000;
 
 // 上架影片总数（用于算分片数）。/titles 的 total 即 status=1 可列表数，与 sitemap 口径一致。
 async function titleCount(): Promise<number> {
-  const d = await serverGetSafe<{ total: number }>("/titles", { size: 1 }, 3600);
+  const d = await serverGetSafe<{ total: number }>("/titles", { size: 1 });
   return d?.total ?? 0;
 }
 

@@ -1,8 +1,8 @@
 import { Box, Stack, Typography } from "@mui/material";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { serverGetSafe } from "@/lib/api";
-import type { HomeData, HomeSection } from "@/lib/types";
+import { getHome } from "@/lib/cached";
+import type { HomeSection } from "@/lib/types";
 import Collections from "@/components/Collections";
 import HeroCarousel from "@/components/HeroCarousel";
 import HomeContinue from "@/components/HomeContinue";
@@ -12,7 +12,6 @@ import RecommendRow from "@/components/RecommendRow";
 
 // 首页正文 SSR：服务端取 /home（含 banners + 各分类 sections），渲染出带影片的 HTML。
 // 按请求渲染：构建期无 API 会预渲染空首页，故不走静态预渲染。ponytail: 需要缓存时再上 unstable_cache/revalidate
-export const dynamic = "force-dynamic";
 
 // 横排分类：服务端渲染（数据来自首页 /home sections）。「更多」跳分类页深链。
 function SectionRow({ s }: { s: HomeSection }) {
@@ -57,7 +56,7 @@ function SectionRow({ s }: { s: HomeSection }) {
 }
 
 export default async function HomePage() {
-  const data = await serverGetSafe<HomeData>("/home");
+  const data = await getHome();
   const banners = data?.banners ?? [];
   const sections = data?.sections ?? [];
   return (

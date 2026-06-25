@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import { Box, Typography } from "@mui/material";
-import { serverGetSafe } from "@/lib/api";
+import { getPeople } from "@/lib/cached";
 import { BRAND } from "@/lib/site";
-import type { Paged, Title } from "@/lib/types";
 import PosterGrid from "@/components/PosterGrid";
 import { Empty } from "@/components/State";
 
-export const revalidate = 300;
 
 type Params = { params: Promise<{ name: string }> };
 
@@ -19,7 +17,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function PersonPage({ params }: Params) {
   const { name } = await params;
   const n = decodeURIComponent(name);
-  const data = await serverGetSafe<Paged<Title>>("/people", { name: n, size: 60 });
+  const data = await getPeople(n);
   const list = data?.list ?? [];
   return (
     <Box sx={{ p: { xs: 1.5, md: 2 } }}>

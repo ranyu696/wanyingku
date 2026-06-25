@@ -6,7 +6,6 @@ import { sitemapChunks } from "@/lib/sitemap";
 // 影片十几万 > sitemap 单文件 5 万上限 → 拆成多个 /sitemap/{id}.xml（robots 列全部分片）。
 // 运行时生成、取数不缓存：避开构建期对后端的不稳定大请求 + 跨构建复用的陈旧 fetch 缓存
 // （这俩此前把分片缓存成空/旧尺寸）。sitemap 抓取频率低，运行时取数可接受。
-export const dynamic = "force-dynamic";
 
 export async function generateSitemaps() {
   const chunks = await sitemapChunks();
@@ -23,11 +22,9 @@ export default async function sitemap({ id }: { id: Promise<string> }): Promise<
     }
   }
   const list =
-    (await serverGetSafe<Array<{ id: number; slug?: string; updated_at?: string }>>(
-      "/sitemap",
-      { page },
-      0, // no-store：每次新鲜取，不用持久 fetch 缓存
-    )) ?? [];
+    (await serverGetSafe<Array<{ id: number; slug?: string; updated_at?: string }>>("/sitemap", {
+      page,
+    })) ?? [];
   for (const t of list) {
     entries.push({
       url: `${SITE_URL}/title/${t.slug || t.id}`,

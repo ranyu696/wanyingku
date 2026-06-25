@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { cacheLife } from "next/cache";
 import { BRAND } from "@/lib/site";
 
 // 站点默认 OG 社交分享图（1200×630）。覆盖所有未设专属图的路由；
@@ -10,8 +11,11 @@ export const contentType = "image/png";
 const TAGLINE = "海量影视聚合 · 免费在线观看";
 const KINDS = "电影 · 电视剧 · 动漫 · 综艺 · 短剧 · 纪录片";
 
-// Satori 默认字体不含中文 → 按用到的字形从 Google Fonts 取子集 TTF（next/og 不支持 woff2，用旧 UA 拿 ttf）
-async function loadCjkFont(text: string): Promise<ArrayBuffer | null> {
+// Satori 默认字体不含中文 → 按用到的字形从 Google Fonts 取子集 TTF（next/og 不支持 woff2，用旧 UA 拿 ttf）。
+// "use cache"：PPR 下 OG 图静态预渲染，未缓存的 fetch 在预渲染期会挂；缓存字体(base64 可序列化)后可静态生成。
+async function loadCjkFontB64(text: string): Promise<string | null> {
+  "use cache";
+  cacheLife("max");
   try {
     const url = `https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@700&text=${encodeURIComponent(text)}`;
     const css = await fetch(url, {
@@ -25,14 +29,16 @@ async function loadCjkFont(text: string): Promise<ArrayBuffer | null> {
     if (!m) {
       return null;
     }
-    return await fetch(m[1]).then((r) => r.arrayBuffer());
+    const buf = await fetch(m[1]).then((r) => r.arrayBuffer());
+    return Buffer.from(buf).toString("base64"); // base64：use cache 可序列化
   } catch {
     return null; // 取字失败：兜底用默认字体（中文可能缺字，但不让构建/请求挂）
   }
 }
 
 export default async function OgImage() {
-  const font = await loadCjkFont(BRAND + TAGLINE + KINDS);
+  const b64 = await loadCjkFontB64(BRAND + TAGLINE + KINDS);
+  const font = b64 ? Buffer.from(b64, "base64") : undefined;
 
   return new ImageResponse(
     (

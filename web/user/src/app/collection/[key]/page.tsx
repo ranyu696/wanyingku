@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import { Box, Typography } from "@mui/material";
-import { serverGetSafe } from "@/lib/api";
+import { getCollection } from "@/lib/cached";
 import { BRAND } from "@/lib/site";
 import type { Title } from "@/lib/types";
 import PosterGrid from "@/components/PosterGrid";
 import { Empty } from "@/components/State";
 
-export const revalidate = 300;
 
 interface CollectionData {
   title: string;
@@ -19,7 +18,7 @@ type Params = { params: Promise<{ key: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { key } = await params;
-  const data = await serverGetSafe<CollectionData>(`/collections/${key}`, { size: 60 });
+  const data = await getCollection(key);
   return {
     title: `${data?.title ?? "专题"} - ${BRAND}`,
     description: data?.desc || undefined,
@@ -28,7 +27,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 export default async function CollectionPage({ params }: Params) {
   const { key } = await params;
-  const data = await serverGetSafe<CollectionData>(`/collections/${key}`, { size: 60 });
+  const data = await getCollection(key);
   const list = data?.list ?? [];
   return (
     <Box sx={{ p: { xs: 1.5, md: 2 } }}>

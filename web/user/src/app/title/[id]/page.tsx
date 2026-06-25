@@ -3,8 +3,7 @@ import { type ReactNode } from "react";
 import { Box, Chip, Stack, Typography } from "@mui/material";
 import { Play } from "lucide-react";
 import Link from "next/link";
-import { serverGetSafe } from "@/lib/api";
-import type { DetailResp } from "@/lib/types";
+import { getDetail } from "@/lib/cached";
 import { KIND_LABELS } from "@/lib/types";
 import { DEF_TITLE, SITE_URL } from "@/lib/site";
 import { breadcrumbLd, detailLd, detailMetadata, splitNames } from "@/lib/seo";
@@ -15,13 +14,12 @@ import Related from "@/components/Related";
 import Comments from "@/components/Comments";
 import { Empty } from "@/components/State";
 
-export const revalidate = 60;
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
-  const data = await serverGetSafe<DetailResp>(`/titles/${id}`);
+  const data = await getDetail(id);
   const d = data?.detail;
   return d ? detailMetadata(d) : { title: DEF_TITLE };
 }
@@ -46,7 +44,7 @@ function SectionTitle({ children }: { children: ReactNode }) {
 // 影视介绍页（RSC）：简介/选季/选集 + JSON-LD，正文服务端渲染。操作/选集/相关/评论为客户端岛。
 export default async function DetailPage({ params }: Params) {
   const { id } = await params;
-  const data = await serverGetSafe<DetailResp>(`/titles/${id}`);
+  const data = await getDetail(id);
   const detail = data?.detail;
   if (!detail) {
     return <Empty text="影片不存在" />;

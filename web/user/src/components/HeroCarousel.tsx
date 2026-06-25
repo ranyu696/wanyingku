@@ -95,6 +95,7 @@ export default function HeroCarousel({ items }: { items: Title[] }) {
                 src={t.backdrop || t.poster}
                 alt={t.name}
                 loading={i === 0 ? "eager" : "lazy"}
+                fetchPriority={i === 0 ? "high" : "auto"}
                 sx={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
               />
               <Box

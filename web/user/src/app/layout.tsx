@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
+import { API_BASE } from "@/lib/api";
 import { BRAND, DEF_DESC, DEF_TITLE, SITE_URL } from "@/lib/site";
+
+// 海报/图片都来自 API_BASE 的主机（api.wanyingku.com）→ 预连接省一次 TLS 握手，加速 LCP 大图
+const IMG_ORIGIN = new URL(API_BASE).origin;
 import Providers from "@/components/Providers";
 import Shell from "@/components/Shell";
 import "./globals.css";
@@ -34,6 +38,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href={IMG_ORIGIN} />
+        <link rel="dns-prefetch" href={IMG_ORIGIN} />
+      </head>
       <body>
         <Providers>
           {/* Shell 读 usePathname(请求期数据)，PPR 下用 Suspense 包住：html/body 作静态壳秒发，导航+页面流式补入 */}

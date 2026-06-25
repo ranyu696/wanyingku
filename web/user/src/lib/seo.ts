@@ -109,5 +109,11 @@ export function detailMetadata(d: TitleDetail): Metadata {
       url: canonical,
       images: d.poster ? [d.poster] : undefined,
     },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description: desc,
+      images: d.poster ? [d.poster] : undefined,
+    },
   };
 }

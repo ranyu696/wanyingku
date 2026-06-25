@@ -17,6 +17,11 @@ export const metadata: Metadata = {
     title: DEF_TITLE,
     description: DEF_DESC,
   },
+  twitter: {
+    card: "summary_large_image",
+    title: DEF_TITLE,
+    description: DEF_DESC,
+  },
 };
 
 export const viewport: Viewport = {

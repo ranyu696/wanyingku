@@ -19,10 +19,15 @@ func (h *Handler) Sitemap(c echo.Context) error {
 	}
 	var rows []row
 	// ponytail: 按主键 id 取（走 PK 索引，廉价、抗写入并发）；站点地图顺序对爬虫无意义。
-	// 上限 50000 = sitemap 单文件协议上限；超过需拆分 sitemap index（届时再说）。
+	// 分页：每页 50000 = sitemap 单文件协议上限。?page 从 0 起，前端按总数拆 sitemap index。
+	const size = 50000
+	page := qInt(c, "page", 0)
+	if page < 0 {
+		page = 0
+	}
 	h.DB.WithContext(c.Request().Context()).Raw(
 		`SELECT id, slug, to_char(updated_at, 'YYYY-MM-DD') AS updated_at
-		 FROM titles WHERE status = 1 ORDER BY id LIMIT 50000`).Scan(&rows)
+		 FROM titles WHERE status = 1 ORDER BY id LIMIT ? OFFSET ?`, size, page*size).Scan(&rows)
 	return response.OK(c, rows)
 }
 

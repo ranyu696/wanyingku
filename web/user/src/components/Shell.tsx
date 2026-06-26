@@ -26,7 +26,10 @@ const mainNavs = [
 const MAXW = 1320;
 
 // 底部友情链接（外链，新标签打开；正经友链互换给 dofollow）
-const FRIEND_LINKS = [{ name: "好狗电影导航", url: "https://www.howgo.cc" }];
+const FRIEND_LINKS = [
+  { name: "好狗电影导航", url: "https://www.howgo.cc" },
+  { name: "聚BT", url: "https://jubt13.xyz/cn/index.html" },
+];
 
 function isActive(pathname: string, path: string): boolean {
   return path === "/" ? pathname === "/" : pathname.startsWith(path);

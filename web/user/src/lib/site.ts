@@ -8,6 +8,16 @@ export const DEF_DESC =
 // X/Twitter 归属账号。ponytail: 占位为品牌名，没有官方号就改成真实 @handle 或删掉
 export const TWITTER_SITE = "@wanyingku";
 
+// OG 默认字段：layout/首页/详情页都 spread 它，避免某页自设 openGraph 时把 siteName/locale
+// 顶掉（Next 对 openGraph 是浅合并=整体替换，不会逐字段继承）。
+export const ogBase = {
+  siteName: BRAND,
+  locale: "zh_CN",
+  type: "website" as const,
+  title: DEF_TITLE,
+  description: DEF_DESC,
+};
+
 // 生产部署用 SITE_URL；本地回落 5173（与 dev 端口一致）
 export const SITE_URL = process.env.SITE_URL || "http://localhost:5173";
 

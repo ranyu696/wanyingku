@@ -2,7 +2,7 @@ import { Box, Typography } from "@mui/material";
 import type { Metadata } from "next";
 import { getHome } from "@/lib/cached";
 import { websiteLd } from "@/lib/seo";
-import { DEF_TITLE, SITE_URL } from "@/lib/site";
+import { DEF_TITLE, ogBase, SITE_URL } from "@/lib/site";
 import Collections from "@/components/Collections";
 import HeroCarousel from "@/components/HeroCarousel";
 import HomeContinue from "@/components/HomeContinue";
@@ -13,7 +13,8 @@ import RecommendRow from "@/components/RecommendRow";
 // 首页 canonical / og:url（"/" 规范化到站点根，避免带参/分页重复收录）
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
-  openGraph: { url: SITE_URL },
+  // 注意：Next 对 openGraph 是浅合并(整体替换)，必须 spread ogBase，否则会顶掉 siteName/locale 等
+  openGraph: { ...ogBase, url: SITE_URL },
 };
 
 // 首页正文 SSR：服务端取 /home（含 banners + 各分类 sections），渲染出带影片的 HTML。

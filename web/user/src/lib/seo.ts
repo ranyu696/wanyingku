@@ -118,6 +118,7 @@ export function detailMetadata(d: TitleDetail): Metadata {
     alternates: { canonical },
     openGraph: {
       siteName: BRAND,
+      locale: "zh_CN",
       type: "video.other",
       title,
       description: desc,

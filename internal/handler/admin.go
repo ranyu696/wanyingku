@@ -200,6 +200,92 @@ type autoReviewResult struct {
 	Proposals []AutoReviewProposal `json:"proposals,omitempty"`
 }
 
+// DedupByURL 强信号去重：复核作品与库里其他作品共享 ≥min_shared 个相同播放 URL → 判为同一部
+//（同一 m3u8 流=同一视频内容，高精度），合并(保留 source_count 高的)。短剧无外部 ID，URL 是最可靠信号。
+// 一次性批量 join 找配对(扫一遍 episodes)，不逐条查。dry=1 默认只产出方案；dry=0 异步执行。
+func (h *Handler) DedupByURL(c echo.Context) error {
+	dry := c.QueryParam("dry") != "0"
+	minShared := qInt(c, "min_shared", 2)
+	if dry {
+		return response.OK(c, h.runDedupURL(c.Request().Context(), minShared, true))
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Hour)
+		defer cancel()
+		res := h.runDedupURL(ctx, minShared, false)
+		slog.Info("dedup-url done", "merged", res.Merged, "min_shared", minShared)
+	}()
+	return response.OK(c, map[string]any{"started": true, "min_shared": minShared})
+}
+
+func (h *Handler) runDedupURL(ctx context.Context, minShared int, dry bool) *autoReviewResult {
+	res := &autoReviewResult{DryRun: dry}
+	var reviewIDs []int64
+	h.DB.WithContext(ctx).Model(&model.SourceItem{}).
+		Where("needs_review = true AND title_id IS NOT NULL").
+		Distinct().Pluck("title_id", &reviewIDs)
+	if len(reviewIDs) == 0 {
+		return res
+	}
+	type pair struct {
+		A      int64
+		B      int64
+		Shared int
+	}
+	var pairs []pair
+	// 复核作品(e1)与任意其他作品(e2)共享相同 URL，按共享数聚合
+	h.DB.WithContext(ctx).Raw(`
+		SELECT e1.title_id AS a, e2.title_id AS b, count(DISTINCT e1.url) AS shared
+		FROM episodes e1
+		JOIN episodes e2 ON e2.url = e1.url AND e2.title_id <> e1.title_id
+		WHERE e1.title_id IN ? AND e1.url <> ''
+		GROUP BY e1.title_id, e2.title_id
+		HAVING count(DISTINCT e1.url) >= ?`, reviewIDs, minShared).Scan(&pairs)
+	// 每条复核作品取共享最多的那个对手
+	best := map[int64]pair{}
+	for _, p := range pairs {
+		if cur, ok := best[p.A]; !ok || p.Shared > cur.Shared {
+			best[p.A] = p
+		}
+	}
+	seen := map[[2]int64]bool{} // 互配去重(a,b)与(b,a)只处理一次
+	for a, p := range best {
+		lo, hi := a, p.B
+		if hi < lo {
+			lo, hi = hi, lo
+		}
+		if seen[[2]int64{lo, hi}] {
+			continue
+		}
+		seen[[2]int64{lo, hi}] = true
+		res.Scanned++
+		from, to, valid := h.mergeDirection(ctx, a, p.B)
+		if !valid {
+			continue
+		}
+		if dry {
+			if len(res.Proposals) < 500 {
+				var fn, tn string
+				h.DB.WithContext(ctx).Model(&model.Title{}).Where("id = ?", from).Pluck("name", &fn)
+				h.DB.WithContext(ctx).Model(&model.Title{}).Where("id = ?", to).Pluck("name", &tn)
+				res.Proposals = append(res.Proposals, AutoReviewProposal{FromID: from, ToID: to, FromName: fn, ToName: tn, Score: float32(p.Shared)})
+			}
+			res.Merged++
+			continue
+		}
+		if err := h.Repo.MergeTitles(ctx, from, to); err != nil {
+			slog.Error("dedup-url merge failed", "from", from, "to", to, "err", err)
+			continue
+		}
+		h.DB.WithContext(ctx).Model(&model.SourceItem{}).Where("title_id = ?", to).Update("needs_review", false)
+		h.Title.InvalidateDetail(ctx, from)
+		h.Title.InvalidateDetail(ctx, to)
+		h.Syncer.RemoveFromIndex(ctx, from)
+		res.Merged++
+	}
+	return res
+}
+
 // AutoReview 批量自动复核 needs_review 队列，替代手工逐条审核：
 // 每条复核作品用采集期同套模糊召回找库里最像的「另一条」，分数≥min_score 判为重复→合并
 // (保留 source_count 高的为主，另一条并入)，否则判独立→清 needs_review。复用 fuzzyCandidates

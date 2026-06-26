@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { API_BASE } from "@/lib/api";
-import { BRAND, DEF_DESC, DEF_TITLE, SITE_URL } from "@/lib/site";
+import { BRAND, DEF_DESC, DEF_TITLE, SITE_URL, TWITTER_SITE } from "@/lib/site";
 
 // 海报/图片都来自 API_BASE 的主机（api.wanyingku.com）→ 预连接省一次 TLS 握手，加速 LCP 大图
 const IMG_ORIGIN = new URL(API_BASE).origin;
@@ -19,11 +19,15 @@ export const metadata: Metadata = {
   openGraph: {
     siteName: BRAND,
     type: "website",
+    locale: "zh_CN",
     title: DEF_TITLE,
     description: DEF_DESC,
+    // og:image 走 app/opengraph-image.png 文件约定；alt 走同目录 opengraph-image.alt.txt
   },
   twitter: {
     card: "summary_large_image",
+    site: TWITTER_SITE,
+    creator: TWITTER_SITE,
     title: DEF_TITLE,
     description: DEF_DESC,
   },

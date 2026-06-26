@@ -1,6 +1,6 @@
-// 流式：服务端取数期间先显加载态。
-import { Loading as Spinner } from "@/components/State";
+// 流式：服务端取榜单期间先显排行榜骨架（toggles + hero + 领奖台 + 榜单行）。
+import { RankSkeleton } from "@/components/State";
 
 export default function Loading() {
-  return <Spinner />;
+  return <RankSkeleton />;
 }

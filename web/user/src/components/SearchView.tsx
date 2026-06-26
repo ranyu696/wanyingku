@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { Box, Chip, InputBase, Paper, Stack, Typography } from "@mui/material";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useHotSearches, useInfinite } from "@/lib/hooks";
 import InfiniteGrid from "@/components/InfiniteGrid";
 import { KIND_LABELS } from "@/lib/types";
@@ -84,10 +85,13 @@ function HotCloud({ onPick }: { onPick: (k: string) => void }) {
 }
 
 export default function SearchView() {
-  const [q, setQ] = useState(""); // 输入框显示值（含输入法合成中的拼音）
-  const [query, setQuery] = useState(""); // 真正提交搜索的值（合成结束 + 防抖后）
-  const [kind, setKind] = useState(0);
-  const [semantic, setSemantic] = useState(false);
+  const router = useRouter();
+  const sp = useSearchParams();
+  // 从 URL 初始化：直达 /search?q=...&kind=...&mode=semantic 可还原搜索（可分享/可索引/可回退）
+  const [q, setQ] = useState(() => sp.get("q") ?? ""); // 输入框显示值（含输入法合成中的拼音）
+  const [query, setQuery] = useState(() => sp.get("q") ?? ""); // 真正提交搜索的值（合成结束 + 防抖后）
+  const [kind, setKind] = useState(() => Number(sp.get("kind")) || 0);
+  const [semantic, setSemantic] = useState(() => sp.get("mode") === "semantic");
   const composing = useRef(false); // 输入法合成中（打拼音组字）标记
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -97,6 +101,17 @@ export default function SearchView() {
     timer.current = setTimeout(() => setQuery(v), 300);
   };
   useEffect(() => () => clearTimeout(timer.current ?? undefined), []);
+
+  // 把已提交的搜索状态同步进 URL（replace 不灌历史）：地址栏始终反映当前搜索
+  useEffect(() => {
+    const next = new URLSearchParams();
+    const trimmed = query.trim();
+    if (trimmed) next.set("q", trimmed);
+    if (kind) next.set("kind", String(kind));
+    if (semantic) next.set("mode", "semantic");
+    const qs = next.toString();
+    router.replace(qs ? `/search?${qs}` : "/search", { scroll: false });
+  }, [query, kind, semantic, router]);
 
   const onInput = (v: string) => {
     setQ(v);

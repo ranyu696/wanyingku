@@ -1,14 +1,23 @@
 import { Box, Stack, Typography } from "@mui/material";
+import type { Metadata } from "next";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { getHome } from "@/lib/cached";
 import type { HomeSection } from "@/lib/types";
+import { websiteLd } from "@/lib/seo";
+import { DEF_TITLE, SITE_URL } from "@/lib/site";
 import Collections from "@/components/Collections";
 import HeroCarousel from "@/components/HeroCarousel";
 import HomeContinue from "@/components/HomeContinue";
 import PosterCard from "@/components/PosterCard";
 import RandomPick from "@/components/RandomPick";
 import RecommendRow from "@/components/RecommendRow";
+
+// 首页 canonical / og:url（"/" 规范化到站点根，避免带参/分页重复收录）
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+  openGraph: { url: SITE_URL },
+};
 
 // 首页正文 SSR：服务端取 /home（含 banners + 各分类 sections），渲染出带影片的 HTML。
 // 按请求渲染：构建期无 API 会预渲染空首页，故不走静态预渲染。ponytail: 需要缓存时再上 unstable_cache/revalidate
@@ -59,8 +68,17 @@ export default async function HomePage() {
   const data = await getHome();
   const banners = data?.banners ?? [];
   const sections = data?.sections ?? [];
+  const ld = websiteLd(SITE_URL);
   return (
     <Box sx={{ pb: 2 }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(ld).replace(/</g, "\\u003c") }}
+      />
+      {/* 页面唯一 H1：对屏幕阅读器/搜索引擎可见，视觉上隐藏以不破坏 hero 布局 */}
+      <Typography component="h1" sx={{ position: "absolute", width: 1, height: 1, p: 0, m: -1, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap", border: 0 }}>
+        {DEF_TITLE}
+      </Typography>
       <HeroCarousel items={banners} />
       <RandomPick />
       <HomeContinue />

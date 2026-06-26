@@ -25,6 +25,9 @@ const mainNavs = [
 // 内容统一最大宽度（桌面居中限宽，避免大屏拉太宽）
 const MAXW = 1320;
 
+// 底部友情链接（外链，新标签打开；正经友链互换给 dofollow）
+const FRIEND_LINKS = [{ name: "好狗电影导航", url: "https://www.howgo.cc" }];
+
 function isActive(pathname: string, path: string): boolean {
   return path === "/" ? pathname === "/" : pathname.startsWith(path);
 }
@@ -138,6 +141,41 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         }}
       >
         {children}
+
+        {/* 友情链接 */}
+        <Box
+          component="footer"
+          sx={{
+            mt: 4,
+            pt: 2.5,
+            px: { xs: 1.5, md: 2 },
+            borderTop: "1px solid",
+            borderColor: "divider",
+          }}
+        >
+          <Stack direction="row" sx={{ flexWrap: "wrap", alignItems: "center", gap: 1.5, rowGap: 1 }}>
+            <Typography variant="caption" color="text.secondary">
+              友情链接
+            </Typography>
+            {FRIEND_LINKS.map((l) => (
+              <Typography
+                key={l.url}
+                component="a"
+                href={l.url}
+                target="_blank"
+                rel="noopener"
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                  textDecoration: "none",
+                  "&:hover": { color: "primary.main" },
+                }}
+              >
+                {l.name}
+              </Typography>
+            ))}
+          </Stack>
+        </Box>
       </Box>
 
       {/* 手机 / 平板竖屏：底部 Tab（账户位随登录态显示 我的 / 登录） */}

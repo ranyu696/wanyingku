@@ -29,6 +29,7 @@ const MAXW = 1320;
 const FRIEND_LINKS = [
   { name: "好狗电影导航", url: "https://www.howgo.cc" },
   { name: "聚BT", url: "https://jubt13.xyz/cn/index.html" },
+  { name: "龙猫网", url: "https://ailongmiao.com/" },
 ];
 
 function isActive(pathname: string, path: string): boolean {

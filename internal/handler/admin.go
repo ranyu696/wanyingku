@@ -153,14 +153,39 @@ func (h *Handler) SyncAll(c echo.Context) error {
 // ---- 去重复核与人工合并 ----
 
 // ReviewList 列出待人工复核的采集记录（灰区匹配）。
+// 富化：补「归类作品名」+「疑似重复候选(系统模糊召回最像的另一条)名+相似分」，供人工一眼判断该不该合并。
 func (h *Handler) ReviewList(c echo.Context) error {
+	ctx := c.Request().Context()
 	page, size := qInt(c, "page", 1), qInt(c, "size", 24)
-	q := h.DB.WithContext(c.Request().Context()).Model(&model.SourceItem{}).Where("needs_review = true")
+	q := h.DB.WithContext(ctx).Model(&model.SourceItem{}).Where("needs_review = true")
 	var total int64
 	q.Count(&total)
 	var list []model.SourceItem
 	q.Order("updated_at DESC").Offset((page - 1) * size).Limit(size).Find(&list)
-	return response.Page(c, list, total, page, size)
+
+	type reviewItem struct {
+		model.SourceItem
+		TitleName      string  `json:"title_name"`
+		CandidateID    int64   `json:"candidate_id"`
+		CandidateName  string  `json:"candidate_name"`
+		CandidateScore float32 `json:"candidate_score"`
+	}
+	out := make([]reviewItem, len(list))
+	for i, it := range list {
+		ri := reviewItem{SourceItem: it}
+		if it.TitleID != nil {
+			var t model.Title
+			if err := h.DB.WithContext(ctx).First(&t, *it.TitleID).Error; err == nil {
+				ri.TitleName = t.Name
+				if cid, score, ok := h.Syncer.FindDuplicate(ctx, &t); ok {
+					ri.CandidateID, ri.CandidateScore = cid, score
+					h.DB.WithContext(ctx).Model(&model.Title{}).Where("id = ?", cid).Pluck("name", &ri.CandidateName)
+				}
+			}
+		}
+		out[i] = ri
+	}
+	return response.Page(c, out, total, page, size)
 }
 
 // MergeTitles 把 from 作品并入 to（解决误判为两条的情况）。

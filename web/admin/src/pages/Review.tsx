@@ -13,6 +13,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useMergeTitles, useReview } from "../api/hooks";
+import type { SourceItem } from "../api/types";
 import PageHeader from "../components/PageHeader";
 import TableSkeleton from "../components/TableSkeleton";
 
@@ -36,6 +37,29 @@ export default function Review() {
       setMsg(`已将作品 #${f} 合并进 #${t}`);
       setFromId("");
       setToId("");
+      await review.send();
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "合并失败");
+    }
+  };
+
+  // 一键把复核作品并入系统建议的候选（方向：归类作品 → 候选）。逐条人工确认，不可逆。
+  const doRowMerge = async (it: SourceItem) => {
+    if (!it.title_id || !it.candidate_id) {
+      return;
+    }
+    if (
+      !window.confirm(
+        `确认把「${it.title_name}」(#${it.title_id}) 并入「${it.candidate_name}」(#${it.candidate_id})？\n合并不可逆。`,
+      )
+    ) {
+      return;
+    }
+    setMsg("");
+    try {
+      await merge.send({ from_id: it.title_id, to_id: it.candidate_id });
+      setMsg(`已将 #${it.title_id} 并入 #${it.candidate_id}`);
+      await review.send();
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "合并失败");
     }
@@ -79,24 +103,48 @@ export default function Review() {
       <Table size="small">
         <TableHead>
           <TableRow>
-            <TableCell>ID</TableCell>
-            <TableCell>名称</TableCell>
+            <TableCell>采集名称</TableCell>
             <TableCell>年份</TableCell>
             <TableCell>源类型</TableCell>
             <TableCell>归类作品</TableCell>
-            <TableCell>置信度</TableCell>
+            <TableCell>疑似重复（候选）</TableCell>
+            <TableCell align="right">操作</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {review.loading && list.length === 0 && <TableSkeleton cols={6} />}
           {list.map((it) => (
             <TableRow key={it.id}>
-              <TableCell>{it.id}</TableCell>
               <TableCell>{it.name}</TableCell>
               <TableCell>{it.year || "-"}</TableCell>
               <TableCell>{it.type_name}</TableCell>
-              <TableCell>{it.title_id ?? "-"}</TableCell>
-              <TableCell>{it.match_confidence.toFixed(2)}</TableCell>
+              <TableCell>
+                {it.title_name || "（未知）"}
+                <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+                  #{it.title_id ?? "-"}
+                </Typography>
+              </TableCell>
+              <TableCell>
+                {it.candidate_id ? (
+                  <>
+                    {it.candidate_name || "（未知）"}
+                    <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+                      #{it.candidate_id} · {it.candidate_score?.toFixed(2)}
+                    </Typography>
+                  </>
+                ) : (
+                  <Typography variant="caption" color="text.secondary">
+                    无候选
+                  </Typography>
+                )}
+              </TableCell>
+              <TableCell align="right">
+                {it.title_id && it.candidate_id ? (
+                  <Button size="small" color="warning" onClick={() => void doRowMerge(it)} disabled={merge.loading}>
+                    并入候选
+                  </Button>
+                ) : null}
+              </TableCell>
             </TableRow>
           ))}
           {!review.loading && list.length === 0 ? (

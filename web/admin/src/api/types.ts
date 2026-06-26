@@ -20,6 +20,11 @@ export interface SourceItem {
   title_id?: number;
   match_confidence: number;
   needs_review: boolean;
+  // 复核列表富化字段：归类作品名 + 疑似重复候选(名+相似分)
+  title_name?: string;
+  candidate_id?: number;
+  candidate_name?: string;
+  candidate_score?: number;
 }
 
 export interface RequestItem {

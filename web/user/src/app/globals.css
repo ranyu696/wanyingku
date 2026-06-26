@@ -16,6 +16,9 @@ html {
 body {
   background: #0c0c11;
   -webkit-font-smoothing: antialiased;
+  /* 横向锁死：横排(海报/片单/分类)各自内部 overflow-x:auto 滑动，页面整体不应横向滚动、
+     右侧不留空白。用 clip 而非 hidden——clip 不建立滚动容器，不破坏 sticky 顶栏/筛选条。 */
+  overflow-x: clip;
 }
 a {
   color: inherit;

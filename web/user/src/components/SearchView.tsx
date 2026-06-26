@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Box, Chip, InputBase, Paper, Stack, Typography } from "@mui/material";
 import { useHotSearches, useInfinite } from "@/lib/hooks";
 import InfiniteGrid from "@/components/InfiniteGrid";
@@ -84,10 +84,30 @@ function HotCloud({ onPick }: { onPick: (k: string) => void }) {
 }
 
 export default function SearchView() {
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(""); // 输入框显示值（含输入法合成中的拼音）
+  const [query, setQuery] = useState(""); // 真正提交搜索的值（合成结束 + 防抖后）
   const [kind, setKind] = useState(0);
   const [semantic, setSemantic] = useState(false);
-  const trimmed = q.trim();
+  const composing = useRef(false); // 输入法合成中（打拼音组字）标记
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 防抖提交：合成中不提交，避免把半截拼音「zhengzha」当关键词搜
+  const commit = (v: string) => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setQuery(v), 300);
+  };
+  useEffect(() => () => clearTimeout(timer.current ?? undefined), []);
+
+  const onInput = (v: string) => {
+    setQ(v);
+    if (!composing.current) commit(v);
+  };
+  const pick = (k: string) => {
+    setQ(k);
+    setQuery(k); // 点热搜立即搜
+  };
+
+  const trimmed = query.trim();
   return (
     <Box sx={{ pt: 1.5 }}>
       <Paper sx={{ mx: { xs: 1.5, md: 2 }, px: 2, py: 0.6, borderRadius: 5, bgcolor: "#1c1c26" }}>
@@ -95,9 +115,18 @@ export default function SearchView() {
           placeholder={semantic ? "用一句话描述你想看的…" : "搜电影、剧集、综艺、动漫…"}
           fullWidth
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => onInput(e.target.value)}
           autoFocus
           sx={{ color: "#fff" }}
+          inputProps={{
+            onCompositionStart: () => {
+              composing.current = true;
+            },
+            onCompositionEnd: (e: React.CompositionEvent<HTMLInputElement>) => {
+              composing.current = false;
+              commit(e.currentTarget.value); // 中文上屏后再搜
+            },
+          }}
         />
       </Paper>
       <Stack direction="row" sx={{ px: { xs: 1.5, md: 2 }, mt: 1, gap: 1, alignItems: "center" }}>
@@ -135,7 +164,7 @@ export default function SearchView() {
           <Results q={trimmed} kind={kind} semantic={semantic} />
         </>
       ) : (
-        <HotCloud onPick={setQ} />
+        <HotCloud onPick={pick} />
       )}
     </Box>
   );

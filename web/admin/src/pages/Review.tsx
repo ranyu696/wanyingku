@@ -9,10 +9,9 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  TextField,
   Typography,
 } from "@mui/material";
-import { useMergeTitles, useReview } from "../api/hooks";
+import { useMergeTitles, useReview, useReviewKeep } from "../api/hooks";
 import type { SourceItem } from "../api/types";
 import PageHeader from "../components/PageHeader";
 import TableSkeleton from "../components/TableSkeleton";
@@ -20,82 +19,56 @@ import TableSkeleton from "../components/TableSkeleton";
 export default function Review() {
   const review = useReview(1);
   const merge = useMergeTitles();
-  const [fromId, setFromId] = useState("");
-  const [toId, setToId] = useState("");
+  const keep = useReviewKeep();
   const [msg, setMsg] = useState("");
+  const busy = merge.loading || keep.loading;
 
-  const doMerge = async () => {
+  const run = async (fn: () => Promise<unknown>, ok: string) => {
     setMsg("");
-    const f = Number(fromId);
-    const t = Number(toId);
-    if (!f || !t || f === t) {
-      setMsg("请输入两个不同的作品 ID");
-      return;
-    }
     try {
-      await merge.send({ from_id: f, to_id: t });
-      setMsg(`已将作品 #${f} 合并进 #${t}`);
-      setFromId("");
-      setToId("");
+      await fn();
+      setMsg(ok);
       await review.send();
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : "合并失败");
+      setMsg(e instanceof Error ? e.message : "操作失败");
     }
   };
 
-  // 一键把复核作品并入系统建议的候选（方向：归类作品 → 候选）。逐条人工确认，不可逆。
-  const doRowMerge = async (it: SourceItem) => {
-    if (!it.title_id || !it.candidate_id) {
-      return;
-    }
-    if (
-      !window.confirm(
-        `确认把「${it.title_name}」(#${it.title_id}) 并入「${it.candidate_name}」(#${it.candidate_id})？\n合并不可逆。`,
-      )
-    ) {
-      return;
-    }
-    setMsg("");
-    try {
-      await merge.send({ from_id: it.title_id, to_id: it.candidate_id });
-      setMsg(`已将 #${it.title_id} 并入 #${it.candidate_id}`);
-      await review.send();
-    } catch (e) {
-      setMsg(e instanceof Error ? e.message : "合并失败");
-    }
+  // 并入系统建议的候选（归类作品 → 候选）
+  const doMergeCandidate = (it: SourceItem) => {
+    if (!it.title_id || !it.candidate_id) return;
+    if (!window.confirm(`把「${it.title_name}」(#${it.title_id}) 并入「${it.candidate_name}」(#${it.candidate_id})？\n合并不可逆。`)) return;
+    void run(() => merge.send({ from_id: it.title_id!, to_id: it.candidate_id! }), `已将 #${it.title_id} 并入 #${it.candidate_id}`);
+  };
+
+  // 并入手动指定的目标作品 ID
+  const doMergeManual = (it: SourceItem) => {
+    if (!it.title_id) return;
+    const v = window.prompt(`把「${it.title_name}」(#${it.title_id}) 并入到哪个作品ID？`);
+    const to = Number(v);
+    if (!to || to === it.title_id) return;
+    if (!window.confirm(`把 #${it.title_id} 并入 #${to}？合并不可逆。`)) return;
+    void run(() => merge.send({ from_id: it.title_id!, to_id: to }), `已将 #${it.title_id} 并入 #${to}`);
+  };
+
+  // 标为独立：清复核标记，移出队列
+  const doKeep = (it: SourceItem) => {
+    if (!it.title_id) return;
+    void run(() => keep.send(it.title_id!), `已标为独立：#${it.title_id}`);
   };
 
   const list = review.data?.list ?? [];
   return (
     <Box>
       <PageHeader title="去重复核 / 人工合并" />
-      <Box sx={{ p: 2, mb: 3, border: "1px solid rgba(255,255,255,.1)", borderRadius: 2 }}>
-        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-          把「源作品 from」合并进「目标作品 to」（解决同一部被误判成两条）
-        </Typography>
-        <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
-          <TextField
-            size="small"
-            label="from 作品ID"
-            value={fromId}
-            onChange={(e) => setFromId(e.target.value)}
-          />
-          <TextField
-            size="small"
-            label="to 作品ID"
-            value={toId}
-            onChange={(e) => setToId(e.target.value)}
-          />
-          <Button variant="contained" onClick={() => void doMerge()} disabled={merge.loading}>
-            合并
-          </Button>
-        </Stack>
-        {msg ? (
-          <Alert severity="info" sx={{ mt: 2 }}>
-            {msg}
-          </Alert>
-        ) : null}
-      </Box>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        逐条人工处理：判断「归类作品」与「疑似重复候选」是否同一部 —— 是则「并入候选」或「并入指定ID」；不是则「标为独立」移出队列。
+      </Typography>
+      {msg ? (
+        <Alert severity="info" sx={{ mb: 2 }} onClose={() => setMsg("")}>
+          {msg}
+        </Alert>
+      ) : null}
 
       <Typography variant="subtitle1" sx={{ mb: 1 }}>
         待复核采集记录（{review.data?.total ?? 0}）
@@ -139,11 +112,19 @@ export default function Review() {
                 )}
               </TableCell>
               <TableCell align="right">
-                {it.title_id && it.candidate_id ? (
-                  <Button size="small" color="warning" onClick={() => void doRowMerge(it)} disabled={merge.loading}>
-                    并入候选
+                <Stack direction="row" spacing={0.5} sx={{ justifyContent: "flex-end" }}>
+                  {it.candidate_id ? (
+                    <Button size="small" color="warning" onClick={() => doMergeCandidate(it)} disabled={busy}>
+                      并入候选
+                    </Button>
+                  ) : null}
+                  <Button size="small" onClick={() => doMergeManual(it)} disabled={busy}>
+                    并入指定
                   </Button>
-                ) : null}
+                  <Button size="small" color="success" onClick={() => doKeep(it)} disabled={busy}>
+                    标为独立
+                  </Button>
+                </Stack>
               </TableCell>
             </TableRow>
           ))}

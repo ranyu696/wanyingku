@@ -82,6 +82,13 @@ export function useMergeTitles() {
   );
 }
 
+// 标为独立：清掉该作品的复核标记，移出待复核队列
+export function useReviewKeep() {
+  return useRequest((titleId: number) => alova.Post(`/admin/review/${titleId}/keep`), {
+    immediate: false,
+  });
+}
+
 export function useUpdateRequest() {
   return useRequest(
     (v: { id: number; status: number; title_id?: number; admin_note?: string }) =>

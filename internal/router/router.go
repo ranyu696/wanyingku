@@ -98,6 +98,7 @@ func Setup(cfg *config.Config, h *handler.Handler) *echo.Echo {
 	admin.POST("/sources/:id/sync", h.SyncSource, heavy)
 	admin.POST("/sync-all", h.SyncAll, heavy)
 	admin.GET("/review", h.ReviewList)
+	admin.POST("/review/:id/keep", h.ReviewKeep) // 标为独立(清复核标记)，:id=title_id
 	admin.POST("/review/auto", h.AutoReview, heavy)      // 批量自动复核去重-名称模糊(dry-run/执行)
 	admin.POST("/review/dedup-url", h.DedupByURL, heavy) // 批量去重-播放URL重叠(强信号, dry-run/执行)
 	admin.POST("/titles/merge", h.MergeTitles)

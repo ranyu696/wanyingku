@@ -188,6 +188,17 @@ func (h *Handler) ReviewList(c echo.Context) error {
 	return response.Page(c, out, total, page, size)
 }
 
+// ReviewKeep 把某复核作品标记为「已复核·确认独立」：清掉其所有采集项的 needs_review，移出队列。
+func (h *Handler) ReviewKeep(c echo.Context) error {
+	tid := paramInt64(c, "id") // title_id
+	if tid <= 0 {
+		return response.BadRequest(c, "参数错误")
+	}
+	h.DB.WithContext(c.Request().Context()).Model(&model.SourceItem{}).
+		Where("title_id = ?", tid).Update("needs_review", false)
+	return response.OK(c, map[string]any{"ok": true})
+}
+
 // MergeTitles 把 from 作品并入 to（解决误判为两条的情况）。
 func (h *Handler) MergeTitles(c echo.Context) error {
 	var in struct {

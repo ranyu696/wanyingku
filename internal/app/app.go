@@ -88,6 +88,7 @@ func Build(cfg *config.Config) (*App, error) {
 		Syncer: syncer,
 		Push:   pushSvc,
 		Store:  store,
+		Cache:  c,
 		DB:     gdb,
 	}
 

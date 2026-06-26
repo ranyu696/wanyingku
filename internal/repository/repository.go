@@ -146,6 +146,8 @@ func (f *TitleFilter) normalize() {
 
 func sortClause(sort string) string {
 	switch sort {
+	case "newest":
+		return "created_at DESC" // 最近上线（入库时间）
 	case "latest":
 		return "updated_at DESC"
 	case "rating":

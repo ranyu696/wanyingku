@@ -106,6 +106,7 @@ export interface Paged<T> {
 export interface HomeSection {
   title: string;
   kind: number;
+  sort?: string; // 无限横滑按此 sort 翻页（popular / newest）
   list: Title[];
 }
 

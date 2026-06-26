@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
+	"github.com/xiaoxin/cms/internal/cache"
 	"github.com/xiaoxin/cms/internal/config"
 	"github.com/xiaoxin/cms/internal/repository"
 	"github.com/xiaoxin/cms/internal/service/auth"
@@ -27,6 +28,7 @@ type Handler struct {
 	Syncer *collect.Syncer
 	Push   *push.Service
 	Store  storage.Storage
+	Cache  *cache.Cache
 	DB     *gorm.DB
 }
 

@@ -49,6 +49,8 @@ func Setup(cfg *config.Config, h *handler.Handler) *echo.Echo {
 	pub.GET("/genres", h.Genres)
 	pub.GET("/requests", h.ListRequests)
 	pub.GET("/sitemap", h.Sitemap)
+	pub.POST("/titles/:id/heartbeat", h.Heartbeat) // 观看心跳→在看人数
+	pub.GET("/watching", h.Watching)               // 批量查在看人数
 
 	// 需登录
 	auth := g.Group("", mw.JWTAuth(secret))

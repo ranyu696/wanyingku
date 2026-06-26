@@ -1,12 +1,16 @@
 "use client";
+import { useMemo } from "react";
 import { Box, Typography } from "@mui/material";
 import { useRouter } from "next/navigation";
-import { useCollections } from "@/lib/hooks";
+import { useCollections, useWatching } from "@/lib/hooks";
 
 export default function Collections() {
   const { data } = useCollections();
   const cols = data ?? [];
   const router = useRouter();
+  // 专题内预览影片的在看人数（真实，来自观看页心跳），按专题汇总展示
+  const ids = useMemo(() => cols.flatMap((c) => c.list.map((t) => t.id)), [cols]);
+  const watching = useWatching(ids);
   if (cols.length === 0) {
     return null;
   }
@@ -30,6 +34,7 @@ export default function Collections() {
       >
         {cols.map((c) => {
           const cover = c.list[0]?.backdrop || c.list[0]?.poster;
+          const watchers = c.list.reduce((sum, t) => sum + (watching[t.id] ?? 0), 0);
           return (
             <Box
               key={c.key}
@@ -55,6 +60,37 @@ export default function Collections() {
                   loading="lazy"
                   sx={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />
+              ) : null}
+              {watchers > 0 ? (
+                <Box
+                  sx={{
+                    position: "absolute",
+                    top: 8,
+                    left: 8,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                    px: 0.9,
+                    py: 0.3,
+                    borderRadius: 999,
+                    bgcolor: "rgba(0,0,0,.6)",
+                    backdropFilter: "blur(4px)",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      bgcolor: "#ff4d5e",
+                      animation: "wykPulse 1.6s ease-in-out infinite",
+                      "@keyframes wykPulse": { "0%,100%": { opacity: 1 }, "50%": { opacity: 0.3 } },
+                    }}
+                  />
+                  <Typography sx={{ fontSize: 11, fontWeight: 600, color: "#fff", lineHeight: 1 }}>
+                    {watchers} 人在看
+                  </Typography>
+                </Box>
               ) : null}
               <Box
                 sx={{

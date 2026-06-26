@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Box, Button, Chip, IconButton, Stack, Typography } from "@mui/material";
 import { ChevronLeft, Heart, Share2 } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useFavoriteOps, useSaveProgress, useSubmitSkip, useTitleDetail } from "@/lib/hooks";
+import { useFavoriteOps, usePresence, useSaveProgress, useSubmitSkip, useTitleDetail } from "@/lib/hooks";
 import Comments from "@/components/Comments";
 import Player from "@/components/Player";
 import ShortDramaFeed from "@/components/ShortDramaFeed";
@@ -51,6 +51,7 @@ export default function WatchPage() {
   const detail = data?.detail;
   const isShort = detail?.kind === 6;
   const tid = detail?.id ?? 0;
+  const watching = usePresence(tid); // 观看心跳：上报并取当前在看人数
   const lines = detail?.play_sources ?? [];
   const line = lines[lineIdx];
   const eps = line?.episodes ?? [];
@@ -244,6 +245,23 @@ export default function WatchPage() {
           {detail.name}
           {ep ? ` · ${ep.name}` : ""}
         </Typography>
+        {watching > 0 ? (
+          <Stack direction="row" sx={{ alignItems: "center", gap: 0.4, flexShrink: 0, mr: 0.5 }}>
+            <Box
+              sx={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                bgcolor: "#ff4d5e",
+                animation: "wykPulse 1.6s ease-in-out infinite",
+                "@keyframes wykPulse": { "0%,100%": { opacity: 1 }, "50%": { opacity: 0.3 } },
+              }}
+            />
+            <Typography variant="caption" noWrap sx={{ color: "text.secondary" }}>
+              {watching} 人在看
+            </Typography>
+          </Stack>
+        ) : null}
         <IconButton
           size="small"
           onClick={() => void toggleFav()}

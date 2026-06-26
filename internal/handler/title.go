@@ -238,22 +238,25 @@ func (h *Handler) Home(c echo.Context) error {
 	type section struct {
 		Title string        `json:"title"`
 		Kind  int16         `json:"kind"`
+		Sort  string        `json:"sort"` // 前端无限横滑按此 sort 翻页加载
 		List  []model.Title `json:"list"`
 	}
 	defs := []struct {
 		title string
 		kind  int16
+		sort  string
 	}{
-		{"热门电影", model.KindMovie},
-		{"热门剧集", model.KindTV},
-		{"综艺", model.KindVariety},
-		{"动漫", model.KindAnime},
+		{"最近上线", 0, "newest"}, // kind=0=全部，按入库时间倒序
+		{"热门电影", model.KindMovie, "popular"},
+		{"热门剧集", model.KindTV, "popular"},
+		{"综艺", model.KindVariety, "popular"},
+		{"动漫", model.KindAnime, "popular"},
 	}
 	var secs []section
 	for _, d := range defs {
-		res, _ := h.Title.List(ctx, repository.TitleFilter{Kind: d.kind, Sort: "popular", Page: 1, Size: 12})
+		res, _ := h.Title.List(ctx, repository.TitleFilter{Kind: d.kind, Sort: d.sort, Page: 1, Size: 12})
 		if res != nil && len(res.List) > 0 {
-			secs = append(secs, section{Title: d.title, Kind: d.kind, List: res.List})
+			secs = append(secs, section{Title: d.title, Kind: d.kind, Sort: d.sort, List: res.List})
 		}
 	}
 	// banner：热门里挑有横图的，最多 6 条（横图多来自 TMDB 匹配的热门片）

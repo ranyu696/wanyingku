@@ -1,6 +1,6 @@
 "use client";
 import { type DependencyList, useCallback, useEffect, useRef, useState } from "react";
-import { api } from "./api";
+import { api, clientId } from "./api";
 import type {
   AuthResult,
   Collection,
@@ -279,4 +279,53 @@ export function useInfinite(url: string, params: Record<string, unknown>) {
   const isLast = total > 0 && items.length >= total;
   const loadMore = useCallback(() => setPage((p) => p + 1), []);
   return { items, total, loading, isLast, loadMore };
+}
+
+// 批量查在看人数（首页/片单广场）：只读，30s 周期刷新保持实时。返回 {titleId: 人数}（仅 >0）。
+export function useWatching(ids: number[]): Record<string, number> {
+  const idsKey = ids.slice().sort((a, b) => a - b).join(",");
+  const q = useQuery<{ counts: Record<string, number> }>(
+    () =>
+      idsKey
+        ? api.get<{ counts: Record<string, number> }>("/watching", { ids: idsKey })
+        : Promise.resolve({ counts: {} }),
+    [idsKey],
+    { initialData: { counts: {} } },
+  );
+  const { send } = q;
+  useEffect(() => {
+    if (!idsKey) {
+      return;
+    }
+    const t = setInterval(() => void send(), 30000);
+    return () => clearInterval(t);
+  }, [idsKey, send]);
+  return q.data?.counts ?? {};
+}
+
+// 观看心跳：在观看页挂载期间每 30s 上报一次，返回当前作品的在看人数。
+export function usePresence(titleId: number) {
+  const [watching, setWatching] = useState(0);
+  useEffect(() => {
+    if (!titleId) {
+      return;
+    }
+    let cancelled = false;
+    const ping = () =>
+      api
+        .post<{ watching: number }>(`/titles/${titleId}/heartbeat`, undefined, { cid: clientId() })
+        .then((d) => {
+          if (!cancelled) {
+            setWatching(d?.watching ?? 0);
+          }
+        })
+        .catch(() => {});
+    ping();
+    const t = setInterval(ping, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [titleId]);
+  return watching;
 }

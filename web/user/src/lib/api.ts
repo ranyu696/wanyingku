@@ -5,6 +5,20 @@
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080/api/v1";
 export const TOKEN_KEY = "yinshi_token";
 export const USER_KEY = "yinshi_user";
+const CID_KEY = "yinshi_cid";
+
+// 稳定的浏览器端匿名 id（在看人数去重用）。SSR 安全：无 localStorage 时返回空串。
+export function clientId(): string {
+  if (typeof localStorage === "undefined") {
+    return "";
+  }
+  let id = localStorage.getItem(CID_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(CID_KEY, id);
+  }
+  return id;
+}
 
 type Params = Record<string, unknown> | undefined;
 

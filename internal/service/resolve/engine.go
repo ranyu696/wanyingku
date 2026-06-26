@@ -252,6 +252,33 @@ func (e *Engine) fuzzyCandidates(ctx context.Context, in Input, tol int) []candi
 	return out
 }
 
+// BestDuplicate 给一条已存在作品 t，在库里找最像的「另一条」(排除自身)，返回候选 id 与相似分。
+// 复用采集期同一套模糊召回(标题+别名, 含续作/不同季保护)，供离线批量复核去重用。
+func (e *Engine) BestDuplicate(ctx context.Context, t *model.Title) (int64, float32, bool) {
+	in := Input{
+		Name:      t.Name,
+		NormTitle: t.NormTitle,
+		Kind:      t.Kind,
+		Season:    int(t.Season),
+		Year:      t.Year,
+	}
+	if in.NormTitle == "" {
+		in.NormTitle = textutil.Normalize(in.Name)
+	}
+	cands := e.fuzzyCandidates(ctx, in, e.cfg.YearTolerance)
+	kept := cands[:0]
+	for _, c := range cands {
+		if c.ID != t.ID { // 排除自身
+			kept = append(kept, c)
+		}
+	}
+	best, ok := topCandidate(kept)
+	if !ok {
+		return 0, 0, false
+	}
+	return best.ID, best.Score, true
+}
+
 // vectorCandidates 用 pgvector 余弦近邻召回（需 002 迁移 + 嵌入提供方）。
 func (e *Engine) vectorCandidates(ctx context.Context, in Input) []candidate {
 	text := strings.TrimSpace(in.Name + " " + in.Overview)

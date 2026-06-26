@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"log/slog"
+	"strconv"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -179,6 +180,130 @@ func (h *Handler) MergeTitles(c echo.Context) error {
 	h.Title.InvalidateDetail(ctx, in.ToID)
 	h.Syncer.RemoveFromIndex(ctx, in.FromID) // from 已被并掉，删其搜索索引文档
 	return response.OK(c, nil)
+}
+
+// AutoReviewProposal 一条自动复核的合并方案。
+type AutoReviewProposal struct {
+	FromID   int64   `json:"from_id"`
+	ToID     int64   `json:"to_id"`
+	FromName string  `json:"from_name"`
+	ToName   string  `json:"to_name"`
+	Score    float32 `json:"score"`
+}
+
+type autoReviewResult struct {
+	Scanned   int                  `json:"scanned"`
+	Merged    int                  `json:"merged"`
+	Cleared   int                  `json:"cleared"`
+	DryRun    bool                 `json:"dry_run"`
+	MinScore  float32              `json:"min_score"`
+	Proposals []AutoReviewProposal `json:"proposals,omitempty"`
+}
+
+// AutoReview 批量自动复核 needs_review 队列，替代手工逐条审核：
+// 每条复核作品用采集期同套模糊召回找库里最像的「另一条」，分数≥min_score 判为重复→合并
+// (保留 source_count 高的为主，另一条并入)，否则判独立→清 needs_review。复用 fuzzyCandidates
+// 自带的「续作/不同季不匹配」保护。
+// dry=1(默认) 只产出方案不改库；limit>0 仅处理前 N 条(抽样)。dry=0 且 limit=0 时全量异步跑。
+func (h *Handler) AutoReview(c echo.Context) error {
+	dry := c.QueryParam("dry") != "0" // 默认 dry-run，必须显式 dry=0 才真改
+	limit := qInt(c, "limit", 0)
+	minScore := float32(0.8)
+	if v := c.QueryParam("min_score"); v != "" {
+		if f, err := strconv.ParseFloat(v, 32); err == nil {
+			minScore = float32(f)
+		}
+	}
+	// dry-run 或小批量：同步返回结果供核对
+	if dry || (limit > 0 && limit <= 300) {
+		return response.OK(c, h.runAutoReview(c.Request().Context(), minScore, dry, limit))
+	}
+	// 全量执行：异步跑，日志报结果（量大、会超请求时限）
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Hour)
+		defer cancel()
+		res := h.runAutoReview(ctx, minScore, false, limit)
+		slog.Info("auto-review done", "scanned", res.Scanned, "merged", res.Merged, "cleared", res.Cleared)
+	}()
+	return response.OK(c, map[string]any{"started": true, "min_score": minScore})
+}
+
+func (h *Handler) runAutoReview(ctx context.Context, minScore float32, dry bool, limit int) *autoReviewResult {
+	res := &autoReviewResult{DryRun: dry, MinScore: minScore}
+	var ids []int64
+	h.DB.WithContext(ctx).Model(&model.SourceItem{}).
+		Where("needs_review = true AND title_id IS NOT NULL").
+		Distinct().Pluck("title_id", &ids)
+	if limit > 0 && len(ids) > limit {
+		ids = ids[:limit]
+	}
+	for _, tid := range ids {
+		select {
+		case <-ctx.Done():
+			return res
+		default:
+		}
+		res.Scanned++
+		var t model.Title
+		if err := h.DB.WithContext(ctx).First(&t, tid).Error; err != nil {
+			continue // 作品已不存在(可能本批已被并掉)，跳过
+		}
+		candID, score, ok := h.Syncer.FindDuplicate(ctx, &t)
+		if !ok || score < minScore {
+			if !dry { // 判为独立作品：清复核标记
+				h.DB.WithContext(ctx).Model(&model.SourceItem{}).Where("title_id = ?", t.ID).Update("needs_review", false)
+			}
+			res.Cleared++
+			continue
+		}
+		from, to, valid := h.mergeDirection(ctx, t.ID, candID)
+		if !valid {
+			continue // 候选已不存在，跳过
+		}
+		if dry {
+			if len(res.Proposals) < 500 {
+				var fn, tn string
+				h.DB.WithContext(ctx).Model(&model.Title{}).Where("id = ?", from).Pluck("name", &fn)
+				h.DB.WithContext(ctx).Model(&model.Title{}).Where("id = ?", to).Pluck("name", &tn)
+				res.Proposals = append(res.Proposals, AutoReviewProposal{FromID: from, ToID: to, FromName: fn, ToName: tn, Score: score})
+			}
+			res.Merged++
+			continue
+		}
+		if err := h.Repo.MergeTitles(ctx, from, to); err != nil {
+			slog.Error("auto-review merge failed", "from", from, "to", to, "err", err)
+			continue
+		}
+		// 存活的 to 也可能本身是复核项 → 一并清标记
+		h.DB.WithContext(ctx).Model(&model.SourceItem{}).Where("title_id = ?", to).Update("needs_review", false)
+		h.Title.InvalidateDetail(ctx, from)
+		h.Title.InvalidateDetail(ctx, to)
+		h.Syncer.RemoveFromIndex(ctx, from)
+		res.Merged++
+	}
+	return res
+}
+
+// mergeDirection 决定合并方向：保留 source_count 高的(更完整)为 to，另一条并入；
+// 持平则保留 id 小的(更早/更规范)。两条任一不存在则 valid=false。
+func (h *Handler) mergeDirection(ctx context.Context, a, b int64) (from, to int64, valid bool) {
+	type row struct {
+		ID          int64
+		SourceCount int
+	}
+	var rows []row
+	h.DB.WithContext(ctx).Model(&model.Title{}).Select("id, source_count").Where("id IN ?", []int64{a, b}).Scan(&rows)
+	if len(rows) < 2 {
+		return 0, 0, false
+	}
+	sc := map[int64]int{}
+	for _, r := range rows {
+		sc[r.ID] = r.SourceCount
+	}
+	if sc[b] > sc[a] || (sc[b] == sc[a] && b < a) {
+		return a, b, true // 保留 b
+	}
+	return b, a, true // 保留 a
 }
 
 // ---- 求片处理 ----

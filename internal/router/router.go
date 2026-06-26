@@ -98,6 +98,7 @@ func Setup(cfg *config.Config, h *handler.Handler) *echo.Echo {
 	admin.POST("/sources/:id/sync", h.SyncSource, heavy)
 	admin.POST("/sync-all", h.SyncAll, heavy)
 	admin.GET("/review", h.ReviewList)
+	admin.POST("/review/auto", h.AutoReview, heavy) // 批量自动复核去重(dry-run/执行)
 	admin.POST("/titles/merge", h.MergeTitles)
 	admin.GET("/requests", h.ListAdminRequests)
 	admin.PUT("/requests/:id", h.UpdateRequest)

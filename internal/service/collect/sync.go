@@ -513,6 +513,11 @@ func (s *Syncer) BackfillOverview(ctx context.Context) int {
 	return s.engine.BackfillOverview(ctx)
 }
 
+// FindDuplicate 复核去重：找一条作品在库里最像的另一条(排除自身)。
+func (s *Syncer) FindDuplicate(ctx context.Context, t *model.Title) (int64, float32, bool) {
+	return s.engine.BestDuplicate(ctx, t)
+}
+
 // ReindexAll 全量重建 Meili 索引（管理端触发）。返回已索引作品数。
 func (s *Syncer) ReindexAll(ctx context.Context) int {
 	if err := s.search.ResetIndex(ctx); err != nil { // 硬重置：清队列+删 embedder+重建，避免被旧 embedder 限流拖死

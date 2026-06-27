@@ -177,13 +177,17 @@ func (h *Handler) CleanupFakeNamed(c echo.Context) error {
 	}
 	// 只删「抄了电视剧/综艺/体育名」的成人条目——色情片绝不会和这些正当重名。
 	// 排除：电影/动漫(真伦理/里番常正当重名)、短剧(名字风格和成人标题高度重叠，会误伤真 JAV)。
-	var hits []item
-	h.DB.WithContext(ctx).Model(&model.Title{}).
+	// kind 参数：限定被删条目的 kind（如 4=只清里番，最稳；不传=里番+伦理都清）。
+	q := h.DB.WithContext(ctx).Model(&model.Title{}).
 		Select("id, name, kind, year").
 		Where(`adult = true AND norm_title <> '' AND EXISTS (
 			SELECT 1 FROM titles t2 WHERE t2.norm_title = titles.norm_title
-			AND t2.adult = false AND t2.kind IN (2,3,7))`).
-		Scan(&hits)
+			AND t2.adult = false AND t2.kind IN (2,3,7))`)
+	if k := qInt(c, "kind", 0); k > 0 {
+		q = q.Where("kind = ?", k)
+	}
+	var hits []item
+	q.Scan(&hits)
 
 	if !dry {
 		for _, a := range hits {

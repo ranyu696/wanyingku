@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import { RouterProvider } from "@tanstack/react-router";
 import { router } from "./router";
+import { Toaster } from "./components/Toast";
 import "./index.css";
 
 const theme = createTheme({
@@ -53,6 +54,7 @@ createRoot(document.getElementById("root")!).render(
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <RouterProvider router={router} />
+      <Toaster />
     </ThemeProvider>
   </StrictMode>,
 );

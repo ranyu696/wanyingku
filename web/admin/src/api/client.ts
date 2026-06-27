@@ -1,6 +1,7 @@
 import { createAlova } from "alova";
 import adapterFetch from "alova/fetch";
 import ReactHook from "alova/react";
+import { toast } from "../components/Toast";
 
 export const API_BASE =
   (import.meta.env.VITE_API_BASE as string | undefined) ||
@@ -39,6 +40,14 @@ export const alova = createAlova({
         throw new Error("网络错误");
       }
       return body;
+    },
+    // 全站统一错误反馈；401 已跳登录，不弹。
+    onError: (err) => {
+      const msg = err instanceof Error ? err.message : "请求失败";
+      if (msg !== "未授权" && !msg.includes("401")) {
+        toast.error(msg);
+      }
+      throw err;
     },
   },
 });

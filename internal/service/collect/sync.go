@@ -486,12 +486,34 @@ func (s *Syncer) ReclassifyAll(ctx context.Context) int {
 	return n
 }
 
-// pickKind 从一部作品各源条目的 kind 里选最终类型：取出现最多的；并列时偏向非电影（电影是兜底默认）。
+// kindRank 平票优先级（大者优先）：真实长片类(电视剧/动漫/综艺/纪录/体育) > 短剧 > 电影(兜底默认)。
+// 同名作品被不同源标成「真实剧集」和「短剧/AI漫剧」并误并成一条时(如 天下第一楼 国产剧+AI漫剧)，偏向真实剧集；
+// 纯短剧(只有短剧票)不受影响仍是短剧。电影最低——它是没命中任何规则时的兜底。
+func kindRank(k int16) int {
+	switch k {
+	case model.KindTV:
+		return 6
+	case model.KindAnime:
+		return 5
+	case model.KindVariety:
+		return 4
+	case model.KindDoc:
+		return 3
+	case model.KindSports:
+		return 2
+	case model.KindShort:
+		return 1
+	default: // 电影=兜底默认
+		return 0
+	}
+}
+
+// pickKind 从一部作品各源条目的 kind 里选最终类型：取出现最多的；并列时按 kindRank 优先级。
 func pickKind(kinds map[int16]int) int16 {
 	best := int16(model.KindMovie)
-	bestN := 0
+	bestN := -1
 	for k, c := range kinds {
-		if c > bestN || (c == bestN && best == model.KindMovie && k != model.KindMovie) {
+		if c > bestN || (c == bestN && kindRank(k) > kindRank(best)) {
 			best, bestN = k, c
 		}
 	}

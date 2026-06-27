@@ -146,6 +146,9 @@ func (s *Syncer) processItem(ctx context.Context, src *model.Source, item *VodIt
 	}
 	kind := ClassifyKind(item.TypeName, root) // 叶子优先，顶级分类兜底
 	groups := ParsePlay(item.VodPlayFrom, item.VodPlayURL)
+	if len(groups) == 0 {
+		return 0, false, nil // 无可直链 m3u8 播放源(只有云播分享页/mp4/解析线) → 不入库，避免空壳
+	}
 	// 短剧纠偏：被判电影但分集很多 → 短剧（源常把微短剧挂在电影/泛题材下）。
 	kind = FixShortByEpisodes(kind, MaxEpisodes(groups))
 	year := item.Year()

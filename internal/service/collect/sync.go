@@ -144,10 +144,6 @@ func (s *Syncer) processItem(ctx context.Context, src *model.Source, item *VodIt
 	if IsJunkType(item.TypeName) || IsJunkType(root) {
 		return 0, false, nil // 新闻/预告等噪声，不入库
 	}
-	// 里番只采魔都资源：其他源(如 ikun)常把真剧集乱标成「里番动漫」污染里番，整条不入库
-	if !strings.Contains(src.Name, "魔都") && (strings.Contains(item.TypeName, "里番") || strings.Contains(root, "里番")) {
-		return 0, false, nil
-	}
 	kind := ClassifyKind(item.TypeName, root) // 叶子优先，顶级分类兜底
 	groups := ParsePlay(item.VodPlayFrom, item.VodPlayURL)
 	// 短剧纠偏：被判电影但分集很多 → 短剧（源常把微短剧挂在电影/泛题材下）。
@@ -440,13 +436,9 @@ func (s *Syncer) ReclassifyAll(ctx context.Context) int {
 	var srcs []model.Source
 	s.db.WithContext(ctx).Find(&srcs)
 	roots := map[int]map[int]string{}
-	moduID := 0 // 里番唯一可信源：魔都资源
 	for i := range srcs {
 		if m := s.fetchTypeRoots(ctx, srcs[i].APIURL); m != nil {
 			roots[srcs[i].ID] = m
-		}
-		if strings.Contains(srcs[i].Name, "魔都") {
-			moduID = srcs[i].ID
 		}
 	}
 
@@ -461,9 +453,9 @@ func (s *Syncer) ReclassifyAll(ctx context.Context) int {
 		`SELECT title_id, source_id, type_id, type_name FROM source_items WHERE title_id IS NOT NULL`).Scan(&rows)
 
 	type agg struct {
-		kinds map[int16]int
-		adult bool
-		total int // 计入投票的有效源条目数（非魔都里番不计）
+		kinds  map[int16]int
+		adultN int // 标成人类型的源条目数
+		total  int // 源条目总数
 	}
 	titles := map[int64]*agg{}
 	for _, r := range rows {
@@ -476,44 +468,26 @@ func (s *Syncer) ReclassifyAll(ctx context.Context) int {
 			a = &agg{kinds: map[int16]int{}}
 			titles[r.TitleID] = a
 		}
-		// 里番只认魔都资源：其他源的「里番*」是乱标(把真剧集塞进里番) → 不投 kind 也不算成人
-		if r.SourceID != moduID && (strings.Contains(r.TypeName, "里番") || strings.Contains(root, "里番")) {
-			continue
-		}
 		a.kinds[ClassifyKind(r.TypeName, root)]++
 		a.total++
 		if IsAdult(r.TypeName) || IsAdult(root) {
-			a.adult = true
+			a.adultN++
 		}
 	}
 
 	n := 0
 	for tid, a := range titles {
-		if a.total == 0 {
-			// 全部源条目都是非魔都里番(纯乱标垃圾，多为真作品的重复条目) → 删除
-			s.deleteTitle(ctx, tid)
-			n++
-			continue
-		}
 		k := pickKind(a.kinds)
+		// adult 按多数源投票（旧逻辑是「任一源成人就成人」，一条同名里番同人就把 LoveLive! 这种正番污染了）
+		adult := a.adultN*2 > a.total
 		res := s.db.WithContext(ctx).Exec(
 			`UPDATE titles SET kind = ?, adult = ? WHERE id = ? AND (kind <> ? OR adult <> ?)`,
-			k, a.adult, tid, k, a.adult)
+			k, adult, tid, k, adult)
 		if res.RowsAffected > 0 {
 			n++
 		}
 	}
 	return n
-}
-
-// deleteTitle 级联删除一个作品及其播放源/剧集/采集项/别名。
-func (s *Syncer) deleteTitle(ctx context.Context, id int64) {
-	s.db.WithContext(ctx).Exec(`DELETE FROM episodes WHERE title_id = ?`, id)
-	s.db.WithContext(ctx).Exec(`DELETE FROM play_sources WHERE title_id = ?`, id)
-	s.db.WithContext(ctx).Exec(`DELETE FROM source_items WHERE title_id = ?`, id)
-	s.db.WithContext(ctx).Exec(`DELETE FROM title_aliases WHERE title_id = ?`, id)
-	s.db.WithContext(ctx).Exec(`DELETE FROM titles WHERE id = ?`, id)
-	s.RemoveFromIndex(ctx, id)
 }
 
 // kindRank 平票优先级（大者优先）：真实长片类(电视剧/动漫/综艺/纪录/体育) > 短剧 > 电影(兜底默认)。

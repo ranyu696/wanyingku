@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -42,6 +43,38 @@ func (h *Handler) ResetContent(c echo.Context) error {
 	}()
 	slog.Warn("content reset: all titles wiped, ids restarted")
 	return response.OK(c, map[string]any{"reset": true})
+}
+
+// GCImages 图床垃圾回收：删掉桶里没被任何 title.poster/backdrop 引用的孤儿图（源换海报URL后旧图残留）。
+// dry=1(默认) 只统计孤儿数不删；dry=0 执行删除。
+func (h *Handler) GCImages(c echo.Context) error {
+	if !h.Store.Enabled() {
+		return response.OK(c, map[string]any{"enabled": false})
+	}
+	dry := c.QueryParam("dry") != "0"
+	ctx := c.Request().Context()
+	prefix := strings.Trim(h.Cfg.Storage.Prefix, "/")
+	if prefix == "" {
+		prefix = "images"
+	}
+	marker := "/" + prefix + "/"
+	keep := map[string]bool{}
+	addRefs := func(col string) {
+		var urls []string
+		h.DB.WithContext(ctx).Model(&model.Title{}).Where(col + " <> ''").Pluck(col, &urls)
+		for _, u := range urls {
+			if i := strings.Index(u, marker); i >= 0 {
+				keep[u[i+1:]] = true // images/hash.webp
+			}
+		}
+	}
+	addRefs("poster")
+	addRefs("backdrop")
+	deleted, scanned, err := h.Store.GC(ctx, keep, dry)
+	if err != nil {
+		return response.Error(c, err.Error())
+	}
+	return response.OK(c, map[string]any{"dry_run": dry, "scanned": scanned, "referenced": len(keep), "orphans": deleted})
 }
 
 // AdminReclassify 按各源分类树重算全部作品的 kind/adult（如新增「AI漫剧→短剧」规则后纠正存量）。

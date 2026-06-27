@@ -177,6 +177,45 @@ func blurHashFromImage(img image.Image) string {
 
 // keyFor 统一用 .webp 后缀（转存即转码为 WebP；转码失败时对象仍按实际 content-type 返回，
 // 扩展名仅作展示，渲染以 content-type 为准）。
+// GC 列出 prefix 下全部对象，删掉不在 keep 集合里的（孤儿图）。dry=true 只统计。
+func (s *S3) GC(ctx context.Context, keep map[string]bool, dry bool) (deleted, scanned int, err error) {
+	objCh := s.client.ListObjects(ctx, s.bucket, minio.ListObjectsOptions{Prefix: s.prefix + "/", Recursive: true})
+	delCh := make(chan minio.ObjectInfo, 256)
+	errc := make(chan error, 1)
+	go func() { // 收集孤儿 key 喂给 RemoveObjects
+		defer close(delCh)
+		for obj := range objCh {
+			if obj.Err != nil {
+				errc <- obj.Err
+				return
+			}
+			scanned++
+			if keep[obj.Key] {
+				continue
+			}
+			deleted++
+			if !dry {
+				delCh <- minio.ObjectInfo{Key: obj.Key}
+			}
+		}
+		errc <- nil
+	}()
+	if dry {
+		for range delCh { // dry 下 delCh 不会收到东西，直接 drain
+		}
+		return deleted, scanned, <-errc
+	}
+	for rerr := range s.client.RemoveObjects(ctx, s.bucket, delCh, minio.RemoveObjectsOptions{}) {
+		if rerr.Err != nil {
+			err = rerr.Err
+		}
+	}
+	if e := <-errc; e != nil {
+		err = e
+	}
+	return deleted, scanned, err
+}
+
 func (s *S3) keyFor(srcURL string) string {
 	sum := sha1.Sum([]byte(srcURL))
 	return fmt.Sprintf("%s/%s.webp", s.prefix, hex.EncodeToString(sum[:]))

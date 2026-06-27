@@ -86,6 +86,27 @@ export default function PosterCard({ t }: { t: Title }) {
             sx={{ position: "absolute", bottom: 6, right: 6, height: 20, fontSize: 11 }}
           />
         ) : null}
+        {/* 成人标记：里番等成人作品常与主流剧重名，加 18+ 一眼区分 */}
+        {t.adult ? (
+          <Box
+            sx={{
+              position: "absolute",
+              bottom: 6,
+              left: 6,
+              px: 0.6,
+              py: "1px",
+              borderRadius: "4px",
+              bgcolor: "rgba(220,38,56,.92)",
+              fontSize: 10.5,
+              fontWeight: 800,
+              lineHeight: 1.5,
+              letterSpacing: 0.3,
+              color: "#fff",
+            }}
+          >
+            18+
+          </Box>
+        ) : null}
       </Box>
       <Typography variant="body2" noWrap sx={{ mt: 0.5, fontWeight: 600 }}>
         {t.name}

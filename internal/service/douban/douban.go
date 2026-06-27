@@ -185,7 +185,8 @@ func NewEnricher(db *gorm.DB, ua string, delayMs int) *Enricher {
 // EnrichMissing 对尚无豆瓣评分的作品逐个增强（limit<=0 表示全部）。返回 处理数/命中数。
 func (e *Enricher) EnrichMissing(ctx context.Context, limit int) (processed, matched int) {
 	var titles []model.Title
-	q := e.db.WithContext(ctx).Where("status = 1 AND douban_id = ''").Order("popularity DESC")
+	// 成人内容(里番/伦理)不匹配豆瓣：豆瓣只收录主流片，按名匹配会把里番挂到同名主流条目、盗其评分
+	q := e.db.WithContext(ctx).Where("status = 1 AND douban_id = '' AND adult = false").Order("popularity DESC")
 	if limit > 0 {
 		q = q.Limit(limit)
 	}

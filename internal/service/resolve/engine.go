@@ -32,6 +32,7 @@ type Input struct {
 	Name      string
 	NormTitle string
 	Kind      int16
+	Adult     bool // 成人(里番/伦理)：只和成人合并、不匹配主流 TMDB；与同名非成人视为独立作品
 	Season    int
 	Year      int
 	Overview  string
@@ -98,7 +99,8 @@ func (e *Engine) Resolve(ctx context.Context, in Input) (*Result, error) {
 	}
 
 	// ---- 第 2 层：TMDB 别名匹配（权威聚类主键）----
-	if e.tmdb != nil && e.cfg.EnableTMDB {
+	// 成人内容(里番/伦理)跳过 TMDB：TMDB 只收录主流片，按名匹配会把里番「鬼作秀」挂到主流 Creepshow 上、盗其评分海报。
+	if e.tmdb != nil && e.cfg.EnableTMDB && !in.Adult {
 		if tmdbID, conf, isTV := e.tmdbMatch(ctx, in); tmdbID > 0 {
 			if id, ok := e.findByTMDB(ctx, in.Kind, tmdbID, in.Season); ok {
 				t, _ := e.getTitle(ctx, id)
@@ -166,21 +168,21 @@ func (e *Engine) exactLocal(ctx context.Context, in Input, tol int) (int64, bool
 	var id int64
 	err := e.db.WithContext(ctx).Raw(`
 		SELECT id FROM titles
-		WHERE kind = ? AND season = ? AND norm_title = ? AND norm_title <> ''
+		WHERE kind = ? AND season = ? AND norm_title = ? AND norm_title <> '' AND adult = ?
 		  AND (? = 0 OR year = 0 OR abs(year - ?) <= ?)
 		ORDER BY (year = ?) DESC, popularity DESC
 		LIMIT 1`,
-		in.Kind, in.Season, in.NormTitle, in.Year, in.Year, yt, in.Year).Row().Scan(&id)
+		in.Kind, in.Season, in.NormTitle, in.Adult, in.Year, in.Year, yt, in.Year).Row().Scan(&id)
 	if err == nil && id > 0 {
 		return id, true
 	}
 	id = 0
 	err = e.db.WithContext(ctx).Raw(`
 		SELECT t.id FROM title_aliases a JOIN titles t ON t.id = a.title_id
-		WHERE t.kind = ? AND t.season = ? AND a.norm_alias = ? AND a.norm_alias <> ''
+		WHERE t.kind = ? AND t.season = ? AND a.norm_alias = ? AND a.norm_alias <> '' AND t.adult = ?
 		  AND (? = 0 OR t.year = 0 OR abs(t.year - ?) <= ?)
 		LIMIT 1`,
-		in.Kind, in.Season, in.NormTitle, in.Year, in.Year, yt).Row().Scan(&id)
+		in.Kind, in.Season, in.NormTitle, in.Adult, in.Year, in.Year, yt).Row().Scan(&id)
 	if err == nil && id > 0 {
 		return id, true
 	}
@@ -215,19 +217,19 @@ func (e *Engine) fuzzyCandidates(ctx context.Context, in Input, tol int) []candi
 	e.db.WithContext(ctx).Raw(`
 		SELECT id, norm_title AS norm
 		FROM titles
-		WHERE kind = ? AND season = ? AND norm_title <> ''
+		WHERE kind = ? AND season = ? AND norm_title <> '' AND adult = ?
 		  AND (? = 0 OR year = 0 OR abs(year - ?) <= ?)
 		LIMIT 2000`,
-		in.Kind, in.Season, in.Year, in.Year, yt).Scan(&trows)
+		in.Kind, in.Season, in.Adult, in.Year, in.Year, yt).Scan(&trows)
 
 	var arows []row
 	e.db.WithContext(ctx).Raw(`
 		SELECT a.title_id AS id, a.norm_alias AS norm
 		FROM title_aliases a JOIN titles t ON t.id = a.title_id
-		WHERE t.kind = ? AND t.season = ? AND a.norm_alias <> ''
+		WHERE t.kind = ? AND t.season = ? AND a.norm_alias <> '' AND t.adult = ?
 		  AND (? = 0 OR t.year = 0 OR abs(t.year - ?) <= ?)
 		LIMIT 2000`,
-		in.Kind, in.Season, in.Year, in.Year, yt).Scan(&arows)
+		in.Kind, in.Season, in.Adult, in.Year, in.Year, yt).Scan(&arows)
 
 	best := map[int64]float32{}
 	score := func(rs []row) {
@@ -259,6 +261,7 @@ func (e *Engine) BestDuplicate(ctx context.Context, t *model.Title) (int64, floa
 		Name:      t.Name,
 		NormTitle: t.NormTitle,
 		Kind:      t.Kind,
+		Adult:     t.Adult,
 		Season:    int(t.Season),
 		Year:      t.Year,
 	}

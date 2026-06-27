@@ -156,11 +156,13 @@ func (s *Syncer) processItem(ctx context.Context, src *model.Source, item *VodIt
 		year = textutil.ExtractYear(name)
 	}
 	norm := textutil.Normalize(name)
+	adult := IsAdult(item.TypeName) || IsAdult(root) // 成人(里番/伦理)：参与匹配，与同名非成人视为独立
 
 	res, err := s.engine.Resolve(ctx, resolve.Input{
 		Name:      name,
 		NormTitle: norm,
 		Kind:      kind,
+		Adult:     adult,
 		Year:      year,
 		Overview:  textutil.CleanHTML(item.VodContent),
 		Director:  item.VodDirector,
@@ -205,9 +207,7 @@ func (s *Syncer) processItem(ctx context.Context, src *model.Source, item *VodIt
 
 	s.writePlay(ctx, src, res.TitleID, si.ID, groups, item)
 	s.updateTitleAggregates(ctx, res.TitleID, item)
-	if IsAdult(item.TypeName) || IsAdult(root) { // 成人内容打标记（伦理片/里番），叶子+顶级都查
-		s.db.WithContext(ctx).Model(&model.Title{}).Where("id = ?", res.TitleID).Update("adult", true)
-	}
+	// adult 已在匹配/createFromRaw 时按 in.Adult 定（成人只和成人合并），无需事后再补设
 	s.notifySubscribers(ctx, res.TitleID)
 
 	return res.TitleID, res.Created, nil

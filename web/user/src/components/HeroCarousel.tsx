@@ -95,6 +95,7 @@ export default function HeroCarousel({ items }: { items: Title[] }) {
           >
             <Link
               href={`/title/${t.slug || t.id}`}
+              prefetch
               style={{ display: "block", height: "100%", textDecoration: "none", color: "inherit" }}
             >
               {hash ? (

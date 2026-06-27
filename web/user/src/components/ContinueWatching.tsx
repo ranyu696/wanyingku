@@ -47,6 +47,7 @@ export default function ContinueWatching({ items }: { items: HistoryItem[] }) {
             <Box key={it.id} sx={{ flex: "0 0 auto", width: { xs: 112, sm: 130, md: 150 } }}>
               <Link
                 href={`/title/${t.slug || t.id}`}
+                prefetch
                 style={{ textDecoration: "none", color: "inherit" }}
               >
                 <Box sx={{ position: "relative" }}>

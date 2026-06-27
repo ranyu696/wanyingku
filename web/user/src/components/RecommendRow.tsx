@@ -42,6 +42,7 @@ export default function RecommendRow() {
             <Box key={t.id} sx={{ flex: "0 0 auto", width: { xs: 112, sm: 130, md: 150 } }}>
               <Link
                 href={`/title/${t.slug || t.id}`}
+                prefetch
                 style={{ textDecoration: "none", color: "inherit" }}
               >
                 <PosterImage src={t.poster} hash={t.poster_blurhash} alt={t.name} adult={t.adult} />

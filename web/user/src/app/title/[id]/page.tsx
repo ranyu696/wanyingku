@@ -18,6 +18,9 @@ import { Empty } from "@/components/State";
 
 type Params = { params: Promise<{ id: string }> };
 
+// 让指向本页的 <Link prefetch> 连详情数据(getDetail 的 minutes 级 use cache)一起预取，而非只预取静态壳
+export const prefetch = "allow-runtime";
+
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
   const data = await getDetail(id);

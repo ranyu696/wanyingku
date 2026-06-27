@@ -4,7 +4,8 @@ import { CirclePlay } from "lucide-react";
 import type { Title } from "@/lib/types";
 import PosterImage from "./PosterImage";
 
-export default function PosterCard({ t }: { t: Title }) {
+// prefetch：受控曝光处(详情页相关推荐等)传 true，连详情数据一起预取；大列表/无限流不传，走默认按路由壳预取
+export default function PosterCard({ t, prefetch }: { t: Title; prefetch?: boolean }) {
   const rating = t.douban_rating
     ? `豆 ${t.douban_rating.toFixed(1)}`
     : t.vote_average
@@ -15,6 +16,7 @@ export default function PosterCard({ t }: { t: Title }) {
   return (
     <Link
       href={`/title/${t.slug || t.id}`}
+      prefetch={prefetch}
       style={{ textDecoration: "none", color: "inherit", display: "block" }}
     >
       <Box

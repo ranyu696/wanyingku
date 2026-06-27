@@ -26,7 +26,7 @@ export default function Related({ tid }: { tid: number }) {
           key={t.id}
           sx={{ flex: "0 0 auto", width: { xs: 112, sm: 130, md: 150 }, scrollSnapAlign: "start" }}
         >
-          <PosterCard t={t} />
+          <PosterCard t={t} prefetch />
         </Box>
       ))}
     </Box>

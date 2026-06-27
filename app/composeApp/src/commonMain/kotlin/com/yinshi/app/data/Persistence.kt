@@ -4,15 +4,21 @@ import kotlinx.serialization.json.Json
 
 data class SessionData(val token: String?, val userJson: String?)
 
-// 平台持久化（Android 用 DataStore，见 androidMain）
-expect suspend fun persistSession(token: String?, userJson: String?)
+// 持久化 / 缓存 / 推送等平台能力已收敛到 [Platform] 接口（见 Platform.kt + androidMain/AndroidPlatform）。
 
-expect suspend fun loadSession(): SessionData
+// 记住上次线路：全局存一个线路 flag，下次打开有同名线路就自动选中（没有则回退首条）
+object LinePref {
+    private const val KEY = "last_source_flag"
 
-// 离线缓存：把接口原始 JSON 存盘，断网时读回（home/detail/collections 可离线浏览）
-expect suspend fun cachePut(key: String, value: String)
+    suspend fun get(): String? = platform.prefGet(KEY)
 
-expect suspend fun cacheGet(key: String): String?
+    suspend fun set(flag: String) {
+        if (flag.isNotBlank()) platform.prefSet(KEY, flag)
+    }
+
+    fun pick(sources: List<PlaySource>, pref: String?): Int =
+        sources.indexOfFirst { it.flag.isNotBlank() && it.flag == pref }.takeIf { it >= 0 } ?: 0
+}
 
 private val sessionJson = Json { ignoreUnknownKeys = true }
 
@@ -20,17 +26,17 @@ private val sessionJson = Json { ignoreUnknownKeys = true }
 object SessionManager {
     suspend fun signIn(result: AuthResult) {
         Session.login(result)
-        persistSession(result.token, result.user?.let { sessionJson.encodeToString(User.serializer(), it) })
+        platform.persistSession(result.token, result.user?.let { sessionJson.encodeToString(User.serializer(), it) })
     }
 
     suspend fun signOut() {
         Session.logout()
-        persistSession(null, null)
+        platform.persistSession(null, null)
     }
 
     // App 启动时回填（重启免登录）
     suspend fun restore() {
-        val s = loadSession()
+        val s = platform.loadSession()
         if (s.token != null) {
             val user = s.userJson?.let {
                 runCatching { sessionJson.decodeFromString(User.serializer(), it) }.getOrNull()

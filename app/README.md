@@ -23,14 +23,17 @@ app/
 └─ composeApp/
    ├─ build.gradle.kts              # KMP + Android + Compose + Ktor + Media3
    └─ src/
+      ├─ androidMain/kotlin/com/yinshi/app/
+      │  ├─ AppNav.kt               # 路由式导航(Navigation 3)：返回栈 + NavDisplay + 底部栏
+      │  └─ data/AndroidPlatform.kt # 平台能力实现(持久化/缓存/品牌图/推送)，对应 commonMain 的 Platform 接口
       ├─ commonMain/kotlin/com/yinshi/app/
-      │  ├─ App.kt                  # 主题 + 极简导航(首页↔详情) + Coil 图片加载器
       │  ├─ theme/                  # ★ 你的样式 UI 库
-      │  │  ├─ Tokens.kt            #   颜色/字体/圆角/间距 令牌（沿用网页端品牌色）
-      │  │  ├─ Theme.kt             #   AppTheme 注入 + AppTheme.colors/.spacing 取值入口
+      │  │  ├─ Tokens.kt            #   颜色/字体/圆角/间距 令牌（深/浅两套色板）
+      │  │  ├─ Theme.kt             #   AppTheme 注入 + 主题模式(ThemeController) + LocalIsDark
       │  │  └─ Components.kt        #   AppText/AppButton/AppChip/AppCard/AppTextField
       │  ├─ data/
       │  │  ├─ Models.kt            #   对齐 Go {code,message,data} 信封的 DTO
+      │  │  ├─ Platform.kt          #   平台能力统一接口（取代散落的顶层 expect/actual）
       │  │  └─ Api.kt               #   Ktor 客户端：home/titles/search/detail
       │  ├─ player/VideoPlayer.kt   #   expect（多平台播放器入口）
       │  └─ ui/
@@ -69,8 +72,16 @@ app/
 - ✅ 播放**进度回传**（每 5s）+ **续播** + **自动下一集**
 - ✅ **分类 / 排行榜页**（题材 + 排序：热门/最新/高分/最赞）
 - ✅ **求片广场**（列表 + 顶片投票 + 我要求片）
-- ⬜ 记忆上次线路、骨架屏、edge-to-edge 细化、排行榜 podium 样式
-- （按需）iOS/Desktop 目标：不做
+- ✅ **记忆上次线路**（DataStore 存线路 flag，详情/播放页自动选中上次线路）
+- ✅ **骨架屏**（首页/分类/搜索加载态 shimmer）、**edge-to-edge**（tab 与覆盖层均处理 inset）
+- ✅ **排行榜 podium**（非「最新」排序时 TOP3 领奖台 + 其余网格名次徽标）
+- ✅ **品牌注入**：launcher 用深色版万影库图标（自适应图标），首页顶栏 + 登录页放万影库字标 logo（垫深色底，浅色主题下也可读）
+- ✅ **底部导航 emoji 图标** + 顶部分隔线 + 选中态
+- ✅ **深浅主题切换**（我的页：跟随系统/浅色/深色，DataStore 持久化，整树换色 + 系统栏图标明暗）
+- ✅ **投屏（Chromecast）**：播放页 📺 按钮 → 自建设备选择器 → Media3 CastPlayer 接管（本地↔投屏自动切、续播）。⚠️ 默认接收器对 HLS 要 https+CORS，**http 源大概率投不上，上 https 才稳**
+- ✅ **路由式导航（Navigation 3）**：自持返回栈 + NavDisplay，13 个路由 key（详情/播放/合集/演职员/求片…）。取代旧 Overlay 状态机——真返回栈、tab 切换不丢首页状态、支持预测式返回
+- ✅ **平台层收敛**：散落的顶层 expect/actual 函数 → 一个 `Platform` 接口 + `AndroidPlatform`（消除 IDE 歧义误报）；浅色 logo 跟随主题
+- （按需）iOS/Desktop 目标：不做（导航宿主在 androidMain，screens 复用 commonMain）
 
 ## 注意
 

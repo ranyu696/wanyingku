@@ -44,6 +44,7 @@ import com.yinshi.app.data.Comment
 import com.yinshi.app.data.DetailResp
 import com.yinshi.app.data.DownloadInfo
 import com.yinshi.app.data.Downloads
+import com.yinshi.app.data.LinePref
 import com.yinshi.app.data.Session
 import com.yinshi.app.data.Title
 import com.yinshi.app.theme.AppButton
@@ -132,6 +133,7 @@ fun DetailScreen(
     LaunchedEffect(id) {
         try {
             resp = api.detail(id)
+            sourceIdx = LinePref.pick(resp?.detail?.play_sources ?: emptyList(), LinePref.get())
             isFav = resp?.is_favorite == true
             isSub = resp?.is_subscribed == true
             isLiked = resp?.is_liked == true
@@ -367,7 +369,10 @@ fun DetailScreen(
                                 AppChip(
                                     text = ps.flag.ifBlank { "线路${i + 1}" } + tag,
                                     selected = i == sourceIdx,
-                                    onClick = { sourceIdx = i },
+                                    onClick = {
+                                        sourceIdx = i
+                                        scope.launch { LinePref.set(ps.flag) }
+                                    },
                                 )
                             }
                         }

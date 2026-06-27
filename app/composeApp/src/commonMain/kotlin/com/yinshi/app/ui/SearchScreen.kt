@@ -28,6 +28,7 @@ import com.yinshi.app.theme.AppChip
 import com.yinshi.app.theme.AppText
 import com.yinshi.app.theme.AppTextField
 import com.yinshi.app.theme.AppTheme
+import com.yinshi.app.ui.components.GridSkeleton
 import com.yinshi.app.ui.components.PosterCard
 import kotlinx.coroutines.delay
 
@@ -85,7 +86,7 @@ fun SearchScreen(api: Api, onOpen: (Long) -> Unit) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
             when {
                 query.isBlank() -> HotSearchList(hot, onPick = { query = it })
-                loading && results.isEmpty() -> Hint("搜索中…")
+                loading && results.isEmpty() -> GridSkeleton()
                 results.isEmpty() -> Hint("没找到，去『我的 → 求片』催一下")
                 else -> LazyVerticalGrid(
                     columns = GridCells.Adaptive(110.dp),

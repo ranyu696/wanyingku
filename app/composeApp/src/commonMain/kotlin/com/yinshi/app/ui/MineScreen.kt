@@ -25,13 +25,15 @@ import com.yinshi.app.data.Api
 import com.yinshi.app.data.Session
 import com.yinshi.app.data.SessionManager
 import com.yinshi.app.data.Title
-import com.yinshi.app.data.isPushEnabled
-import com.yinshi.app.data.setPushEnabled
+import com.yinshi.app.data.platform
 import kotlinx.coroutines.launch
 import com.yinshi.app.theme.AppButton
+import com.yinshi.app.theme.AppChip
 import com.yinshi.app.theme.AppText
 import com.yinshi.app.theme.AppTheme
 import com.yinshi.app.theme.ButtonVariant
+import com.yinshi.app.theme.ThemeController
+import com.yinshi.app.theme.ThemeMode
 import com.yinshi.app.ui.components.PosterCard
 
 @Composable
@@ -55,6 +57,7 @@ fun MineScreen(
             AppButton("登录 / 注册", onClick = onLogin, modifier = Modifier.fillMaxWidth())
             AppButton("求片广场", onClick = onRequests, variant = ButtonVariant.Secondary, modifier = Modifier.fillMaxWidth())
             AppButton("⬇ 我的下载", onClick = onDownloads, variant = ButtonVariant.Secondary, modifier = Modifier.fillMaxWidth())
+            ThemeSwitcher()
         }
         return
     }
@@ -63,7 +66,7 @@ fun MineScreen(
     var hist by remember { mutableStateOf<List<Title>>(emptyList()) }
     var subs by remember { mutableStateOf<List<Title>>(emptyList()) }
     var unread by remember { mutableStateOf(0) }
-    var pushOn by remember { mutableStateOf(isPushEnabled()) }
+    var pushOn by remember { mutableStateOf(platform.isPushEnabled()) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Session.token) {
@@ -118,15 +121,43 @@ fun MineScreen(
             onClick = {
                 val target = !pushOn
                 pushOn = target
-                setPushEnabled(target)
+                platform.setPushEnabled(target)
             },
             variant = if (pushOn) ButtonVariant.Secondary else ButtonVariant.Outline,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         )
 
+        ThemeSwitcher()
+
         PosterRow(title = "继续观看", titles = hist, onOpen = onOpen, emptyHint = "还没有观看记录")
         PosterRow(title = "我的追更", titles = subs, onOpen = onOpen, emptyHint = "还没有追更")
         PosterRow(title = "我的收藏", titles = favs, onOpen = onOpen, emptyHint = "还没有收藏")
+    }
+}
+
+// 主题切换：跟随系统 / 浅色 / 深色，选中即生效并持久化
+@Composable
+private fun ThemeSwitcher() {
+    val scope = rememberCoroutineScope()
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        AppText("主题", style = AppTheme.typography.sectionTitle, modifier = Modifier.padding(bottom = 8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val cur = ThemeController.mode
+            listOf(
+                ThemeMode.System to "跟随系统",
+                ThemeMode.Light to "☀ 浅色",
+                ThemeMode.Dark to "🌙 深色",
+            ).forEach { (m, label) ->
+                AppChip(
+                    text = label,
+                    selected = cur == m,
+                    onClick = {
+                        ThemeController.set(m)
+                        scope.launch { platform.prefSet("theme_mode", m.name) }
+                    },
+                )
+            }
+        }
     }
 }
 

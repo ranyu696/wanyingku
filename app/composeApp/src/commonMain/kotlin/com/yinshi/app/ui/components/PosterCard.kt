@@ -22,8 +22,9 @@ import com.yinshi.app.theme.AppText
 import com.yinshi.app.theme.AppTheme
 
 // 宽度由调用方控制：首页横排传 Modifier.width(120.dp)，网格传 Modifier.fillMaxWidth()。
+// rank 非空时左上角显示名次徽标（排行榜第 4 名起用）。
 @Composable
-fun PosterCard(title: Title, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun PosterCard(title: Title, onClick: () -> Unit, modifier: Modifier = Modifier, rank: Int? = null) {
     val isDouban = title.douban_rating > 0
     val rating = when {
         isDouban -> "豆 " + (kotlin.math.round(title.douban_rating * 10) / 10.0)
@@ -52,6 +53,16 @@ fun PosterCard(title: Title, onClick: () -> Unit, modifier: Modifier = Modifier)
                             color = if (isDouban) Color(0xFFFFCE3D) else Color.White,
                             maxLines = 1,
                         )
+                    }
+                }
+                if (rank != null) {
+                    Box(
+                        Modifier.align(Alignment.TopStart).padding(6.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0xAA000000))
+                            .padding(horizontal = 6.dp, vertical = 1.dp),
+                    ) {
+                        AppText("$rank", style = AppTheme.typography.caption, color = Color.White, maxLines = 1)
                     }
                 }
             }

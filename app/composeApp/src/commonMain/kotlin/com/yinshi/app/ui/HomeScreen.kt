@@ -35,6 +35,7 @@ import com.yinshi.app.theme.AppButton
 import com.yinshi.app.theme.AppText
 import com.yinshi.app.theme.AppTheme
 import com.yinshi.app.theme.ButtonVariant
+import com.yinshi.app.ui.components.BrandLogo
 import com.yinshi.app.ui.components.HomeSkeleton
 import com.yinshi.app.ui.components.PosterCard
 import kotlinx.coroutines.launch
@@ -74,10 +75,13 @@ fun HomeScreen(api: Api, onOpen: (Long) -> Unit, onOpenCollection: (String, Stri
     }
 
     val home = data
-    when {
-        error != null -> CenterText("连接后端失败：$error\n确认 Go 服务在跑，且模拟器用 10.0.2.2")
-        home == null -> HomeSkeleton()
-        else -> {
+    Column(Modifier.fillMaxSize()) {
+        BrandBar()
+        Box(Modifier.fillMaxWidth().weight(1f)) {
+            when {
+                error != null -> CenterText("连接后端失败：$error\n确认 Go 服务在跑，且模拟器用 10.0.2.2")
+                home == null -> HomeSkeleton()
+                else -> {
             val banner = home.banners?.firstOrNull()
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -196,6 +200,19 @@ fun HomeScreen(api: Api, onOpen: (Long) -> Unit, onOpenCollection: (String, Stri
                 }
             }
         }
+    }
+        }
+    }
+}
+
+// 顶部品牌栏：左对齐 logo（万影库）
+@Composable
+private fun BrandBar() {
+    Row(
+        Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        BrandLogo(height = 26.dp)
     }
 }
 

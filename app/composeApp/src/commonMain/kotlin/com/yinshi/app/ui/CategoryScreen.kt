@@ -1,17 +1,23 @@
 package com.yinshi.app.ui
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.lazy.grid.itemsIndexed as gridItemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -20,7 +26,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.yinshi.app.data.Api
 import com.yinshi.app.data.Genre
 import com.yinshi.app.data.Title
@@ -126,23 +135,91 @@ fun CategoryScreen(api: Api, onOpen: (Long) -> Unit) {
             }
         }
 
+        // 排行维度（非「最新」）且够 3 部时，TOP3 走领奖台，其余网格带名次
+        val ranked = sort != "latest" && list.size >= 3
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
             when {
                 loading && list.isEmpty() -> GridSkeleton()
                 list.isEmpty() ->
                     AppText("暂无内容", color = AppTheme.colors.textSecondary, modifier = Modifier.padding(top = 40.dp))
-                else -> LazyVerticalGrid(
-                    columns = GridCells.Adaptive(110.dp),
-                    contentPadding = PaddingValues(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    gridItems(list, key = { it.id }) { t ->
-                        PosterCard(title = t, onClick = { onOpen(t.id) }, modifier = Modifier.fillMaxWidth())
+                else -> {
+                    val rest = if (ranked) list.drop(3) else list
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(110.dp),
+                        contentPadding = PaddingValues(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        if (ranked) {
+                            item(span = { GridItemSpan(maxLineSpan) }) { Podium(list.take(3), onOpen) }
+                        }
+                        gridItemsIndexed(rest, key = { _, t -> t.id }) { index, t ->
+                            PosterCard(
+                                title = t,
+                                onClick = { onOpen(t.id) },
+                                rank = if (ranked) index + 4 else null,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+private val MEDALS = listOf("🥇", "🥈", "🥉")
+
+// 领奖台：第 2 名居左、第 1 名居中（更宽 + 品牌色描边）、第 3 名居右，底对齐凑出台阶感
+@Composable
+private fun Podium(top: List<Title>, onOpen: (Long) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        AppText("🏆 排行榜 · TOP 3", style = AppTheme.typography.sectionTitle, modifier = Modifier.padding(bottom = 12.dp))
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            listOf(1, 0, 2).forEach { i ->
+                val t = top.getOrNull(i)
+                if (t == null) {
+                    Box(Modifier.weight(1f))
+                } else {
+                    PodiumItem(
+                        rank = i + 1,
+                        title = t,
+                        big = i == 0,
+                        onClick = { onOpen(t.id) },
+                        modifier = Modifier.weight(if (i == 0) 1.25f else 1f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PodiumItem(rank: Int, title: Title, big: Boolean, onClick: () -> Unit, modifier: Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        AppText(MEDALS[rank - 1], style = AppTheme.typography.title)
+        Box(
+            Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(8.dp))
+                .then(if (big) Modifier.border(2.dp, AppTheme.colors.primary, RoundedCornerShape(8.dp)) else Modifier)
+                .clickable(onClick = onClick),
+        ) {
+            AsyncImage(
+                model = title.poster,
+                contentDescription = title.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        AppText(
+            title.name,
+            style = AppTheme.typography.label,
+            maxLines = 1,
+            modifier = Modifier.padding(top = 6.dp),
+        )
     }
 }

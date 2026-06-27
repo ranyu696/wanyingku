@@ -14,16 +14,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.yinshi.app.data.Api
 import com.yinshi.app.data.SessionManager
-import com.yinshi.app.data.syncPushToken
+import com.yinshi.app.data.platform
 import com.yinshi.app.theme.AppButton
 import com.yinshi.app.theme.AppText
 import com.yinshi.app.theme.AppTextField
 import com.yinshi.app.theme.AppTheme
 import com.yinshi.app.theme.ButtonVariant
+import com.yinshi.app.ui.components.BrandLogo
 import kotlinx.coroutines.launch
 
 @Composable
@@ -51,7 +53,7 @@ fun LoginScreen(api: Api, onClose: () -> Unit) {
                 }
                 if (res?.token != null) {
                     SessionManager.signIn(res)
-                    syncPushToken() // 登录后同步推送令牌
+                    platform.syncPushToken() // 登录后同步推送令牌
                     onClose()
                 } else {
                     error = "用户名或密码错误"
@@ -68,6 +70,10 @@ fun LoginScreen(api: Api, onClose: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         AppButton("← 返回", onClick = onClose, variant = ButtonVariant.Outline)
+        BrandLogo(
+            height = 40.dp,
+            modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 16.dp),
+        )
         AppText(if (isRegister) "注册" else "登录", style = AppTheme.typography.title)
         AppTextField(username, { username = it }, "用户名", Modifier.fillMaxWidth())
         AppTextField(password, { password = it }, "密码", Modifier.fillMaxWidth(), mask = true)

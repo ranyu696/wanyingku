@@ -9,7 +9,7 @@ import {
   Toolbar,
   Typography,
 } from "@mui/material";
-import { House, LayoutGrid, LogIn, Search, Trophy, User } from "lucide-react";
+import { Download, House, LayoutGrid, LogIn, Search, Trophy, User } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/store/auth";
@@ -109,6 +109,14 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                 </Button>
               );
             })}
+            <Button
+              startIcon={<Download size={20} />}
+              color={isActive(pathname, "/download") ? "primary" : "inherit"}
+              onClick={() => router.push("/download")}
+              sx={{ fontWeight: isActive(pathname, "/download") ? 700 : 500 }}
+            >
+              下载
+            </Button>
           </Stack>
 
           <Box sx={{ flexGrow: 1 }} />
@@ -158,6 +166,22 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             borderColor: "divider",
           }}
         >
+          <Typography
+            component="a"
+            href="/download"
+            sx={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 0.5,
+              mb: 1.5,
+              color: "primary.main",
+              textDecoration: "none",
+              fontWeight: 700,
+              fontSize: 14,
+            }}
+          >
+            <Download size={16} /> 下载手机 / TV 客户端
+          </Typography>
           <Stack direction="row" sx={{ flexWrap: "wrap", alignItems: "center", gap: 1.5, rowGap: 1 }}>
             <Typography variant="caption" color="text.secondary">
               友情链接

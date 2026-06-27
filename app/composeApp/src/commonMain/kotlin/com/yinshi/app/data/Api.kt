@@ -22,7 +22,7 @@ import kotlinx.serialization.json.Json
 // 后端地址：
 //  - Android 模拟器访问宿主机 localhost 用 10.0.2.2
 //  - 真机请改成你电脑的局域网 IP，例如 http://192.168.1.10:8080/api/v1
-const val BASE_URL = "http://10.0.2.2:8080/api/v1"
+const val BASE_URL = "https://api.wanyingku.com/api/v1"
 
 class Api(private val baseUrl: String = BASE_URL) {
     private val json = Json {
@@ -41,9 +41,9 @@ class Api(private val baseUrl: String = BASE_URL) {
     // 读穿缓存：在线则取网络并缓存原始 JSON；离线则读回上次缓存；无缓存才抛错
     private suspend fun cached(key: String, fetch: suspend () -> String): String =
         try {
-            fetch().also { cachePut(key, it) }
+            fetch().also { platform.cachePut(key, it) }
         } catch (e: Throwable) {
-            cacheGet(key) ?: throw e
+            platform.cacheGet(key) ?: throw e
         }
 
     // ---- 公开 ----

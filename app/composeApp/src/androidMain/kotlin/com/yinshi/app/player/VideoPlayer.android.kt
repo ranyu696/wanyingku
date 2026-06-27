@@ -43,10 +43,17 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.media3.cast.CastPlayer
+import androidx.media3.cast.SessionAvailabilityListener
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
+import androidx.mediarouter.media.MediaRouteSelector
+import androidx.mediarouter.media.MediaRouter
+import com.google.android.gms.cast.CastMediaControlIntent
+import com.google.android.gms.cast.framework.CastContext
 import kotlin.math.abs
 import kotlinx.coroutines.delay
 
@@ -100,6 +107,21 @@ actual fun VideoPlayer(
     val activity = remember { context.findActivity() }
     val audio = remember { context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager }
     val exo = remember { DownloadUtil.buildPlayer(context) }
+    // 投屏（Chromecast）：无 Google Play 服务时 CastContext 为 null，整段优雅降级
+    val castContext = remember { runCatching { CastContext.getSharedInstance(context.applicationContext) }.getOrNull() }
+    val castPlayer = remember(castContext) { castContext?.let { CastPlayer(it) } }
+    val mediaRouter = remember { runCatching { MediaRouter.getInstance(context.applicationContext) }.getOrNull() }
+    val castSelector = remember {
+        MediaRouteSelector.Builder()
+            .addControlCategory(
+                CastMediaControlIntent.categoryForCast(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID),
+            )
+            .build()
+    }
+    var casting by remember { mutableStateOf(false) }
+    var castDevice by remember { mutableStateOf("") }
+    var pickerOpen by remember { mutableStateOf(false) }
+    val curUrl by rememberUpdatedState(url)
     val progress by rememberUpdatedState(onProgress)
     val ended by rememberUpdatedState(onEnded)
     val curTime by rememberUpdatedState(onCurrentTimeMs)
@@ -130,6 +152,35 @@ actual fun VideoPlayer(
         }
         exo.addListener(listener)
         onDispose { exo.removeListener(listener) }
+    }
+    // 投屏接管：连上设备→暂停本地、把当前 url+进度推给 CastPlayer；断开→回本地续播
+    DisposableEffect(castPlayer) {
+        val cp = castPlayer ?: return@DisposableEffect onDispose { }
+        val l = object : SessionAvailabilityListener {
+            override fun onCastSessionAvailable() {
+                casting = true
+                castDevice = castContext?.sessionManager?.currentCastSession?.castDevice?.friendlyName ?: ""
+                exo.pause()
+                cp.setMediaItem(
+                    MediaItem.Builder().setUri(curUrl).setMimeType(MimeTypes.APPLICATION_M3U8).build(),
+                    exo.currentPosition,
+                )
+                cp.playWhenReady = true
+                cp.prepare()
+            }
+
+            override fun onCastSessionUnavailable() {
+                casting = false
+                val pos = cp.currentPosition
+                if (pos > 0) exo.seekTo(pos)
+                exo.play()
+            }
+        }
+        cp.setSessionAvailabilityListener(l)
+        onDispose {
+            cp.setSessionAvailabilityListener(null)
+            cp.release()
+        }
     }
     DisposableEffect(url) {
         exo.setMediaItem(MediaItem.fromUri(url))
@@ -308,6 +359,9 @@ actual fun VideoPlayer(
                                 CtrlBtn("🔒", Modifier.padding(start = 8.dp)) { locked = true; controls = false; lockHint = false }
                                 CtrlBtn("${speedLabel(speed)}x", Modifier.padding(start = 8.dp)) { speedMenu = !speedMenu }
                                 CtrlBtn(if (fullscreen) "退出" else "全屏", Modifier.padding(start = 8.dp)) { fullscreen = !fullscreen }
+                                if (castContext != null) {
+                                    CtrlBtn(if (casting) "📺✓" else "📺", Modifier.padding(start = 8.dp)) { pickerOpen = true }
+                                }
                             }
                             Box(Modifier.fillMaxWidth().padding(top = 6.dp).height(3.dp).background(Color(0x55FFFFFF))) {
                                 val f = if (duration > 0) (displayPos.toFloat() / duration).coerceIn(0f, 1f) else 0f
@@ -350,6 +404,12 @@ actual fun VideoPlayer(
                 } else if (showOutro) {
                     SkipPill("下一集 ▶", Modifier.align(Alignment.BottomEnd).padding(bottom = 40.dp, end = 16.dp)) { ended() }
                 }
+
+                if (casting && castPlayer != null) {
+                    CastingOverlay(castDevice, castPlayer) {
+                        mediaRouter?.unselect(MediaRouter.UNSELECT_REASON_STOPPED)
+                    }
+                }
             }
         }
     }
@@ -363,6 +423,19 @@ actual fun VideoPlayer(
         }
     } else {
         Box(modifier) { surface() }
+    }
+
+    if (pickerOpen) {
+        CastPicker(
+            mediaRouter = mediaRouter,
+            selector = castSelector,
+            casting = casting,
+            onStop = {
+                mediaRouter?.unselect(MediaRouter.UNSELECT_REASON_STOPPED)
+                pickerOpen = false
+            },
+            onDismiss = { pickerOpen = false },
+        )
     }
 }
 

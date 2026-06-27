@@ -27,6 +27,22 @@ data class AppColors(
     val rating: Color = Color(0xFFFFC234),        // 评分星
 )
 
+// 深色（默认）与浅色两套品牌色板：主题切换时整树换色，品牌红/紫保持不变。
+val DarkColors = AppColors()
+val LightColors = AppColors(
+    primary = Color(0xFFFF3D5A),
+    secondary = Color(0xFF8B5CF6),
+    background = Color(0xFFF6F6FA),
+    surface = Color(0xFFFFFFFF),
+    surfaceVariant = Color(0xFFECECF2),
+    onPrimary = Color(0xFFFFFFFF),
+    text = Color(0xFF14141A),
+    textSecondary = Color(0xFF5C5C68),
+    textDisabled = Color(0xFFAEAEB8),
+    border = Color(0x14000000),
+    rating = Color(0xFFE6A100),
+)
+
 @Immutable
 data class AppShapes(
     val sm: Dp = 8.dp,

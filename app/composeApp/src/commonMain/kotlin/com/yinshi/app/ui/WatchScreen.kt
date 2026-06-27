@@ -32,6 +32,7 @@ import androidx.compose.ui.window.Dialog
 import com.yinshi.app.data.Api
 import com.yinshi.app.data.DetailResp
 import com.yinshi.app.data.Episode
+import com.yinshi.app.data.LinePref
 import com.yinshi.app.data.ProgressReq
 import com.yinshi.app.data.Session
 import com.yinshi.app.player.VideoPlayer
@@ -81,7 +82,10 @@ fun WatchScreen(api: Api, id: Long, startEpisodeIdx: Int, onBack: () -> Unit) {
         try {
             val r = api.detail(id)
             resp = r
-            val eps = r?.detail?.play_sources?.getOrNull(0)?.episodes ?: emptyList()
+            val sources = r?.detail?.play_sources ?: emptyList()
+            val idx = LinePref.pick(sources, LinePref.get())
+            sourceIdx = idx
+            val eps = sources.getOrNull(idx)?.episodes ?: emptyList()
             val prog = r?.progress
             val resumeEp = prog?.let { p -> eps.firstOrNull { it.idx == p.episode_idx } }
             val target = when {
@@ -194,6 +198,7 @@ fun WatchScreen(api: Api, id: Long, startEpisodeIdx: Int, onBack: () -> Unit) {
                                         sourceIdx = i
                                         startMs = 0
                                         currentEp = d.play_sources[i].episodes.firstOrNull()
+                                        scope.launch { LinePref.set(d.play_sources[i].flag) }
                                     },
                                 )
                             }

@@ -9,3 +9,7 @@ next-env.d.ts
 
 # TS 增量构建缓存（每次构建重生成）
 *.tsbuildinfo
+
+# Playwright E2E 产物
+/test-results
+/playwright-report

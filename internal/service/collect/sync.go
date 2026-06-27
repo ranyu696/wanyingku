@@ -453,8 +453,9 @@ func (s *Syncer) ReclassifyAll(ctx context.Context) int {
 		`SELECT title_id, source_id, type_id, type_name FROM source_items WHERE title_id IS NOT NULL`).Scan(&rows)
 
 	type agg struct {
-		kinds map[int16]int
-		adult bool
+		kinds  map[int16]int
+		adultN int // 标成人类型的源条目数
+		total  int // 源条目总数
 	}
 	titles := map[int64]*agg{}
 	for _, r := range rows {
@@ -468,17 +469,20 @@ func (s *Syncer) ReclassifyAll(ctx context.Context) int {
 			titles[r.TitleID] = a
 		}
 		a.kinds[ClassifyKind(r.TypeName, root)]++
+		a.total++
 		if IsAdult(r.TypeName) || IsAdult(root) {
-			a.adult = true
+			a.adultN++
 		}
 	}
 
 	n := 0
 	for tid, a := range titles {
 		k := pickKind(a.kinds)
+		// adult 按多数源投票（旧逻辑是「任一源成人就成人」，一条同名里番同人就把 LoveLive! 这种正番污染了）
+		adult := a.adultN*2 > a.total
 		res := s.db.WithContext(ctx).Exec(
 			`UPDATE titles SET kind = ?, adult = ? WHERE id = ? AND (kind <> ? OR adult <> ?)`,
-			k, a.adult, tid, k, a.adult)
+			k, adult, tid, k, adult)
 		if res.RowsAffected > 0 {
 			n++
 		}

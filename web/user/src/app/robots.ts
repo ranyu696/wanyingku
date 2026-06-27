@@ -10,7 +10,11 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
   return {
     rules: [
       { userAgent: "*", allow: "/", disallow: ["/mine", "/login", "/watch/"] },
-      { userAgent: "AhrefsBot", disallow: "/" }, // SEO 爬虫：整站禁抓
+      {
+        // SEO/外链分析爬虫：整站禁抓
+        userAgent: ["AhrefsBot", "SemrushBot", "MJ12bot", "DotBot", "BLEXBot", "DataForSeoBot", "PetalBot"],
+        disallow: "/",
+      },
     ],
     sitemap,
   };

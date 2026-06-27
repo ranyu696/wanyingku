@@ -8,11 +8,10 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
   const chunks = await sitemapChunks();
   const sitemap = Array.from({ length: chunks }, (_, i) => `${SITE_URL}/sitemap/${i}.xml`);
   return {
-    rules: {
-      userAgent: "*",
-      allow: "/",
-      disallow: ["/mine", "/login", "/watch/"],
-    },
+    rules: [
+      { userAgent: "*", allow: "/", disallow: ["/mine", "/login", "/watch/"] },
+      { userAgent: "AhrefsBot", disallow: "/" }, // SEO 爬虫：整站禁抓
+    ],
     sitemap,
   };
 }

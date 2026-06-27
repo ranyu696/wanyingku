@@ -23,6 +23,18 @@ func (h *Handler) AdminReindex(c echo.Context) error {
 	return response.OK(c, map[string]any{"started": true})
 }
 
+// AdminReclassify 按各源分类树重算全部作品的 kind/adult（如新增「AI漫剧→短剧」规则后纠正存量）。
+// 量大、需拉各源分类树，后台异步跑。
+func (h *Handler) AdminReclassify(c echo.Context) error {
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+		defer cancel()
+		n := h.Syncer.ReclassifyAll(ctx)
+		slog.Info("reclassify done", "changed", n)
+	}()
+	return response.OK(c, map[string]any{"started": true})
+}
+
 // SourceHealthStats 采集源健康监控：每源线路健康分布 + 平均延迟 + 最近同步/探活。
 func (h *Handler) SourceHealthStats(c echo.Context) error {
 	type row struct {

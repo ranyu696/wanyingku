@@ -24,6 +24,9 @@ func guessKindMatched(typeName string) (int16, bool) {
 		return model.KindDoc, true
 	case strings.Contains(s, "短剧"):
 		return model.KindShort, true
+	case strings.Contains(s, "漫剧"), strings.Contains(s, "动态漫"):
+		// AI漫剧/动态漫=动画形式的微短剧，归短剧（须在「…剧→电视剧」兜底之前拦截）
+		return model.KindShort, true
 	case strings.Contains(s, "足球"), strings.Contains(s, "篮球"), strings.Contains(s, "网球"),
 		strings.Contains(s, "斯诺克"), strings.Contains(s, "LPL"), strings.Contains(s, "体育"),
 		strings.Contains(s, "赛事"), strings.Contains(s, "世界杯"), strings.Contains(s, "联赛"),

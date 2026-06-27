@@ -23,6 +23,27 @@ func (h *Handler) AdminReindex(c echo.Context) error {
 	return response.OK(c, map[string]any{"started": true})
 }
 
+// ResetContent 一次性重建：清空所有内容表 + CASCADE 连带清掉绑定作品的用户活动(收藏/历史/评论/订阅/
+// 点赞/求片/片头尾)，ID 全部重置为 1。保留账号(users)/配置(sources/genres/categories)/设备/通知。
+// 不可逆！需 confirm=YES-WIPE-ALL。
+func (h *Handler) ResetContent(c echo.Context) error {
+	if c.QueryParam("confirm") != "YES-WIPE-ALL" {
+		return response.BadRequest(c, "需 confirm=YES-WIPE-ALL（不可逆，会清空全部作品与绑定作品的用户活动）")
+	}
+	ctx := c.Request().Context()
+	if err := h.DB.WithContext(ctx).Exec(
+		`TRUNCATE titles, title_aliases, source_items, play_sources, episodes RESTART IDENTITY CASCADE`).Error; err != nil {
+		return response.Error(c, err.Error())
+	}
+	go func() {
+		bg, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+		defer cancel()
+		h.Syncer.ReindexAll(bg) // titles 已空 → 清空搜索索引
+	}()
+	slog.Warn("content reset: all titles wiped, ids restarted")
+	return response.OK(c, map[string]any{"reset": true})
+}
+
 // AdminReclassify 按各源分类树重算全部作品的 kind/adult（如新增「AI漫剧→短剧」规则后纠正存量）。
 // 量大、需拉各源分类树，后台异步跑。
 func (h *Handler) AdminReclassify(c echo.Context) error {

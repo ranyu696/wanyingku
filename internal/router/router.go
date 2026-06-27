@@ -91,7 +91,8 @@ func Setup(cfg *config.Config, h *handler.Handler) *echo.Echo {
 	admin.GET("/sources", h.ListSources)
 	admin.GET("/source-health", h.SourceHealthStats)
 	admin.POST("/reindex", h.AdminReindex, heavy)
-	admin.POST("/reclassify", h.AdminReclassify, heavy) // 按分类规则重算全部作品 kind
+	admin.POST("/reclassify", h.AdminReclassify, heavy)   // 按分类规则重算全部作品 kind
+	admin.POST("/reset-content", h.ResetContent, heavy)   // 清空全部内容重建(需 confirm=YES-WIPE-ALL, 不可逆)
 	admin.POST("/indexnow", h.AdminIndexNow, heavy)
 	admin.POST("/sources", h.CreateSource)
 	admin.PUT("/sources/:id", h.UpdateSource)

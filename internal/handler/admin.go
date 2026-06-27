@@ -199,18 +199,30 @@ func (h *Handler) SyncSource(c echo.Context) error {
 	return response.OK(c, map[string]any{"started": true, "source": src.Name, "full": full})
 }
 
-// SyncAll 异步触发全部启用源采集。
+// SyncAll 异步触发全部启用源采集，并发受 collect.concurrency 限制（同 scheduler）。
 func (h *Handler) SyncAll(c echo.Context) error {
 	full := c.QueryParam("full") == "1"
 	var srcs []model.Source
 	h.DB.WithContext(c.Request().Context()).Where("enabled = true").Find(&srcs)
+	conc := h.Cfg.Collect.Concurrency
+	if conc < 1 {
+		conc = 3
+	}
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Hour)
 		defer cancel()
+		sem := make(chan struct{}, conc)
 		for i := range srcs {
-			if _, err := h.Syncer.SyncSource(ctx, &srcs[i], full); err != nil {
-				slog.Error("sync-all item failed", "source", srcs[i].Name, "err", err)
-			}
+			sem <- struct{}{}
+			go func(src model.Source) {
+				defer func() { <-sem }()
+				if _, err := h.Syncer.SyncSource(ctx, &src, full); err != nil {
+					slog.Error("sync-all item failed", "source", src.Name, "err", err)
+				}
+			}(srcs[i])
+		}
+		for i := 0; i < conc; i++ { // 等本轮全部归还信号量
+			sem <- struct{}{}
 		}
 	}()
 	return response.OK(c, map[string]any{"started": true, "count": len(srcs), "full": full})

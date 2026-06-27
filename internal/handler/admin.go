@@ -162,6 +162,43 @@ func (h *Handler) SyncAll(c echo.Context) error {
 	return response.OK(c, map[string]any{"started": true, "count": len(srcs), "full": full})
 }
 
+// CleanupFakeNamed 清理「蹭真剧名的成人条目」：成人作品 + 库里有同名(norm_title)的非成人真作品
+//（如 亢奋/鬼作秀/羞耻——ikun 起成真剧名、被 TMDB 误匹配拉了真剧评分/海报混进里番/伦理）。
+// 真·里番/伦理(名字独特、无同名真剧)不受影响。dry=1(默认) 只列清单；dry=0 级联删除。
+func (h *Handler) CleanupFakeNamed(c echo.Context) error {
+	ctx := c.Request().Context()
+	dry := c.QueryParam("dry") != "0"
+
+	type item struct {
+		ID   int64  `json:"id"`
+		Name string `json:"name"`
+		Kind int16  `json:"kind"`
+		Year int    `json:"year"`
+	}
+	var hits []item
+	h.DB.WithContext(ctx).Model(&model.Title{}).
+		Select("id, name, kind, year").
+		Where(`adult = true AND norm_title <> '' AND EXISTS (
+			SELECT 1 FROM titles t2 WHERE t2.norm_title = titles.norm_title AND t2.adult = false)`).
+		Scan(&hits)
+
+	if !dry {
+		for _, a := range hits {
+			h.DB.WithContext(ctx).Exec(`DELETE FROM episodes WHERE title_id = ?`, a.ID)
+			h.DB.WithContext(ctx).Exec(`DELETE FROM play_sources WHERE title_id = ?`, a.ID)
+			h.DB.WithContext(ctx).Exec(`DELETE FROM source_items WHERE title_id = ?`, a.ID)
+			h.DB.WithContext(ctx).Exec(`DELETE FROM title_aliases WHERE title_id = ?`, a.ID)
+			h.DB.WithContext(ctx).Exec(`DELETE FROM titles WHERE id = ?`, a.ID)
+			h.Syncer.RemoveFromIndex(ctx, a.ID)
+		}
+	}
+	out := hits
+	if len(out) > 800 {
+		out = out[:800]
+	}
+	return response.OK(c, map[string]any{"dry_run": dry, "count": len(hits), "items": out})
+}
+
 // CleanupEmptyLifan 清理里番空壳：成人作品里没有任何播放源的（死链/空条目）。
 // 判据=有播放源就留(ikun 等源的里番都算合法)，没播放源的才是垃圾。
 // dry=1(默认) 只列清单不删；dry=0 级联删除。

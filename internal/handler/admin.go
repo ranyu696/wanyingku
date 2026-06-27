@@ -162,6 +162,41 @@ func (h *Handler) SyncAll(c echo.Context) error {
 	return response.OK(c, map[string]any{"started": true, "count": len(srcs), "full": full})
 }
 
+// CleanupEmptyLifan 清理里番空壳：成人作品里没有任何播放源的（死链/空条目）。
+// 判据=有播放源就留(ikun 等源的里番都算合法)，没播放源的才是垃圾。
+// dry=1(默认) 只列清单不删；dry=0 级联删除。
+func (h *Handler) CleanupEmptyLifan(c echo.Context) error {
+	ctx := c.Request().Context()
+	dry := c.QueryParam("dry") != "0"
+
+	type item struct {
+		ID   int64  `json:"id"`
+		Name string `json:"name"`
+		Kind int16  `json:"kind"`
+		Year int    `json:"year"`
+	}
+	var hits []item
+	h.DB.WithContext(ctx).Model(&model.Title{}).
+		Select("id, name, kind, year").
+		Where("adult = true AND NOT EXISTS (SELECT 1 FROM play_sources p WHERE p.title_id = titles.id)").
+		Scan(&hits)
+
+	if !dry {
+		for _, a := range hits {
+			h.DB.WithContext(ctx).Exec(`DELETE FROM episodes WHERE title_id = ?`, a.ID)
+			h.DB.WithContext(ctx).Exec(`DELETE FROM source_items WHERE title_id = ?`, a.ID)
+			h.DB.WithContext(ctx).Exec(`DELETE FROM title_aliases WHERE title_id = ?`, a.ID)
+			h.DB.WithContext(ctx).Exec(`DELETE FROM titles WHERE id = ?`, a.ID)
+			h.Syncer.RemoveFromIndex(ctx, a.ID)
+		}
+	}
+	out := hits
+	if len(out) > 500 {
+		out = out[:500]
+	}
+	return response.OK(c, map[string]any{"dry_run": dry, "count": len(hits), "items": out})
+}
+
 // ---- 去重复核与人工合并 ----
 
 // ReviewList 列出待人工复核的采集记录（灰区匹配）。

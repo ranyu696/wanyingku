@@ -175,14 +175,14 @@ func (h *Handler) CleanupFakeNamed(c echo.Context) error {
 		Kind int16  `json:"kind"`
 		Year int    `json:"year"`
 	}
-	// 只删「抄了剧集/综艺/短剧/体育名」的成人条目——色情片不会和这些正当重名；
-	// 同名是电影/动漫的不动(真伦理片常和电影重名、真里番常和动漫重名)。
+	// 只删「抄了电视剧/综艺/体育名」的成人条目——色情片绝不会和这些正当重名。
+	// 排除：电影/动漫(真伦理/里番常正当重名)、短剧(名字风格和成人标题高度重叠，会误伤真 JAV)。
 	var hits []item
 	h.DB.WithContext(ctx).Model(&model.Title{}).
 		Select("id, name, kind, year").
 		Where(`adult = true AND norm_title <> '' AND EXISTS (
 			SELECT 1 FROM titles t2 WHERE t2.norm_title = titles.norm_title
-			AND t2.adult = false AND t2.kind IN (2,3,6,7))`).
+			AND t2.adult = false AND t2.kind IN (2,3,7))`).
 		Scan(&hits)
 
 	if !dry {
